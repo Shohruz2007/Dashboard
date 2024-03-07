@@ -2,7 +2,7 @@ import datetime
 from rest_framework import viewsets, status, generics
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAdminUser
-from Admin_panel.permissions import IsAdminUserOrStaff, IsAdminUser
+from Admin_panel.permissions import IsAdminUserOrStaff, IsAdminUser, IsAdminUserOrStaffReadOnly
 from rest_framework_simplejwt.tokens import RefreshToken
 
 
@@ -18,13 +18,15 @@ class PrdCategoryViewset(viewsets.ModelViewSet):
 class PrdViewset(viewsets.ModelViewSet):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
-    permission_classes = (IsAdminUser,)
+    permission_classes = (IsAdminUserOrStaffReadOnly,)
+
 
 
 class PaymentMethodViewset(viewsets.ModelViewSet):
     queryset = PaymentMethod.objects.all()
     serializer_class = PaymentMethodSerializer
-    permission_classes = (IsAdminUser,)
+    permission_classes = (IsAdminUserOrStaffReadOnly,)
+
 
 
 class OrderViewset(viewsets.ModelViewSet):
@@ -235,3 +237,5 @@ class FullDataView(viewsets.GenericViewSet):
         
         
         return Response(response_data)
+
+

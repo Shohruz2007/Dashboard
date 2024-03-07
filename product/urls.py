@@ -6,7 +6,9 @@ router = routers.DefaultRouter()
 router.register(r'category', PrdCategoryViewset, basename='category')
 router.register(r'order', OrderViewset, basename='order')
 router.register(r'paymentmethod', PaymentMethodViewset, basename='paymentmethod')
+
 router.register(r'', PrdViewset, basename='')
+
 # router.register(r'full_data', FullDataView, basename='full_data')
 
 urlpatterns = [

@@ -36,10 +36,10 @@ class OrderViewset(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         
+        data = request.data
         is_related = False
         if not request.user.is_superuser:
             if request.user.is_staff:
-                data = request.data
                 client_id = data.get("client")
                 client = CustomUser.objects.filter(id=client_id).first()
                 if not client is None:
@@ -49,6 +49,12 @@ class OrderViewset(viewsets.ModelViewSet):
         
         if not is_related:
             return Response({"err":"you don't have permissions"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        
+
+        print('DATA --->',data)
+        payment = PaymentMethod.objects.filter(id=data.get('payment_method')).first()
+         
+        
         
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -230,10 +236,6 @@ class FullDataView(viewsets.GenericViewSet):
         }
 
 
-        # print("\n staffs Data -->", staffs[1].__dict__)
-        # print("\n clients Data -->", clients[1])
-        # print("\n Product Data -->", products[0].__dict__)
-        # print("\n order Data -->", orders[1].__dict__)
         
         
         return Response(response_data)

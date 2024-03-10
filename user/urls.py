@@ -4,6 +4,7 @@ from .views import *
 
 router = routers.DefaultRouter()
 router.register(r'user_data', UserGetAPIView, basename='user_data')
+router.register(r'notification', NotificationGetAPIView, basename='notification')
 
 urlpatterns = [
     path('login/', LoginAPIView.as_view()),

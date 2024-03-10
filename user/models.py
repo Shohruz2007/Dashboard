@@ -24,6 +24,7 @@ class CustomUser(AbstractUser):
             "explicitly assigning them."
         ),
     )
+    is_analizer = models.BooleanField(_("analyzer admin status"), default=False)
     is_client = models.BooleanField(_("client status"), default=False)
     related_staff = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL)
 

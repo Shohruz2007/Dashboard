@@ -36,6 +36,7 @@ class OrderViewset(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         
+        
         data = request.data
         is_related = False
         if not request.user.is_superuser:
@@ -51,12 +52,24 @@ class OrderViewset(viewsets.ModelViewSet):
             return Response({"err":"you don't have permissions"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
         
 
-        print('DATA --->',data)
+        print('data --->',data)
         payment = PaymentMethod.objects.filter(id=data.get('payment_method')).first()
-         
+        product = Product.objects.filter(id=data.get('product')).first()
+        
+        if None in [payment,product]:
+            return Response({'err': "detail not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+        def payment_check():
+            if float(payment.deposit) > float(product.price):
+                return (False, {"err":"Payment deposit amount cann't be bigger than product price"})
+            return (True, None)
+        
+        payment_status, err = payment_check()
+        if not payment_status:
+            return Response(err, status=status.HTTP_406_NOT_ACCEPTABLE)
         
         
-        serializer = self.get_serializer(data=request.data)
+        serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
@@ -142,11 +155,13 @@ class OrderViewset(viewsets.ModelViewSet):
         
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
 
 class PaymentPostView(viewsets.GenericViewSet):
+    queryset = PaymentHistory.objects.all()
     serializer_class = PaymentHistorySerializer
     permission_classes = (IsAdminUserOrStaff,)
-    http_method_names = ["post"]
+    http_method_names = ["post", "get"]
 
     def post(self, request, *args, **kwargs):
         request_data = request.data 
@@ -163,7 +178,24 @@ class PaymentPostView(viewsets.GenericViewSet):
         
         serializer.save()
         
-        return Response({'msg':'post'})
+        return Response(serializer.data)
+    
+    
+    def list(self, request, *args, **kwargs):
+        
+        if not request.user.is_superuser:
+            return Response({'err':"You don't have permissions to do it"}, status=status.HTTP_406_NOT_ACCEPTABLE)
+        else:
+            queryset = self.filter_queryset(self.get_queryset())
+            
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
         
 
 class FullDataView(viewsets.GenericViewSet):
@@ -213,7 +245,7 @@ class FullDataView(viewsets.GenericViewSet):
             except:
                 yearly_data.update({order.time_create.strftime('%B'):order.payment_amount})
         
-        # print("\n EXTRA Data -->", (current_time.date() - users[0].time_create.date()).days)
+        # print("\n EXTRA data -->", (current_time.date() - users[0].time_create.date()).days)
         response_data = {
             "product_len":len(products),
             "order_len":len(orders),

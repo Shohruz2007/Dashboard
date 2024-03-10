@@ -16,17 +16,19 @@ class ProductSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class OrderSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Order
-        fields = '__all__'
-
 
 class PaymentMethodSerializer(serializers.ModelSerializer):
     class Meta:
         model = PaymentMethod
         fields = '__all__'
         
+
+class OrderSerializer(serializers.ModelSerializer):
+    product = ProductSerializer(read_only=True)
+    payment_method = PaymentMethodSerializer(read_only=True)
+    class Meta:
+        model = Order
+        fields = '__all__'
 
 class PaymentHistorySerializer(serializers.ModelSerializer):
     class Meta:

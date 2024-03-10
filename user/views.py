@@ -1,3 +1,4 @@
+import datetime
 from django.shortcuts import render
 from django.contrib.auth import get_user_model, authenticate, login
 from django.core.mail import send_mail
@@ -11,8 +12,10 @@ from rest_framework.permissions import AllowAny, IsAdminUser
 from Admin_panel.permissions import IsAdminUserOrStaff
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import CustomUser
-from .serializers import LoginSerializer, UserSerializer, UserCreateSerializer
+from .models import CustomUser, Notification
+from product.models import Order
+from product.serializers import OrderSerializer
+from .serializers import LoginSerializer, UserSerializer, UserCreateSerializer, NotificationSerializer
 
 
 
@@ -196,3 +199,31 @@ class UserGetAPIView(viewsets.ModelViewSet):
         
         self.perform_destroy(instance)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+
+class NotificationGetAPIView(viewsets.ReadOnlyModelViewSet):
+    queryset = Notification.objects.all()
+    serializer_class = NotificationSerializer
+    permission_classes = (IsAdminUserOrStaff,)
+    pagination_class = UserListPagination
+
+def ClientPaymentCheck():
+    orders = Order.objects.filter(is_finished=False)
+    for order in orders:
+        balance = order.balance
+        product_price = order.product.price
+        payment_deposit = order.payment_method.deposit
+        extra_payment = order.payment_method.extra_payment
+        payment_period = order.payment_method.payment_period
+        current_time = datetime.datetime.today()
+        monthly_payment = float(product_price-payment_deposit+extra_payment)/(payment_period if not payment_period==0 else 1)
+        required_payment = balance-payment_deposit
+        print('required_payment -->', required_payment)
+        if required_payment<0:
+            continue #TODO DON'T Know what to do
+        
+        
+        
+        
+ClientPaymentCheck()

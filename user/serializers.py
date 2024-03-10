@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import CustomUser
+from .models import CustomUser, Notification
 from django.core import exceptions
 import django.contrib.auth.password_validation as validators
 
@@ -43,4 +43,10 @@ class UserSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = CustomUser
+        fields = '__all__'
+
+class NotificationSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = Notification
         fields = '__all__'

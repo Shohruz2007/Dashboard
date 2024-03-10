@@ -1,4 +1,6 @@
 import datetime
+from dateutil.relativedelta import relativedelta
+
 from django.shortcuts import render
 from django.contrib.auth import get_user_model, authenticate, login
 from django.core.mail import send_mail
@@ -225,6 +227,11 @@ def ClientPaymentCheck():
         print('required_payment -->', required_payment)
         if required_payment<0:
             continue #TODO DON'T Know what to do
-
+        
+        print('CURRENT ORDER AND MONTHLY PAYMENT -->', order, monthly_payment)
+        payment_period_progress = required_payment//monthly_payment
+        print('payment_period_progress -->', int(payment_period_progress))
+        order_time = order.time_create
+        print(current_time.date() - (order_time+relativedelta(months=1*payment_period_progress)).date())
 
 ClientPaymentCheck()

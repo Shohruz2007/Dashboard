@@ -44,6 +44,7 @@ class LoginAPIView(generics.GenericAPIView):
             "access": str(refresh.access_token),
             "is_staff": user.is_staff,
             "is_superuser": user.is_superuser,
+            "is_analizer": user.is_analizer,
         }
 
 
@@ -57,7 +58,7 @@ class UserCreateView(generics.GenericAPIView):
         new_user_data:dict = request.data
         creator = request.user
         
-        permissions = {'is_superuser':[creator.is_superuser], "is_staff":[creator.is_superuser]}
+        permissions = {'is_superuser':[creator.is_superuser], "is_staff":[creator.is_superuser], "is_analizer":[creator.is_superuser]}
 
         # print('CREATOR -->', creator.is_staff)
         for data_type,has_access in permissions.items():
@@ -105,7 +106,7 @@ class UserGetAPIView(viewsets.ModelViewSet):
 
         # print(params.get('user_type')[0])
         user_type = (params.get('user_type')[0] if not params.get('user_type') is None else None)
-        if not request.user.is_superuser and (request.user.is_staff and not user_type == 'client'):
+        if not request.user.is_superuser and not request.user.is_analizer and (request.user.is_staff and not user_type == 'client'):
             return Response({'error':"you don't have enough permissions"}, status=status.HTTP_406_NOT_ACCEPTABLE)
         
         
@@ -150,7 +151,7 @@ class UserGetAPIView(viewsets.ModelViewSet):
         user_data = serializer.data
         staff = request.user
         
-        if staff.is_superuser or user_data['related_staff'] == staff.id or request_pk==request.user.id:
+        if staff.is_superuser or request.user.is_analizer or user_data['related_staff'] == staff.id or request_pk==request.user.id:
             return Response(user_data)
         else:
             return Response({'err':"you don't have enough permissions"}, status=status.HTTP_406_NOT_ACCEPTABLE)

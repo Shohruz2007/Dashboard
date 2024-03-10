@@ -80,7 +80,7 @@ class OrderViewset(viewsets.ModelViewSet):
         instance = self.get_object()
         
         is_related = False
-        if not request.user.is_superuser:
+        if not request.user.is_superuser and not request.user.is_analizer:
             if request.user.is_staff:
                 is_related = instance.client.related_staff==request.user
         else:
@@ -95,7 +95,7 @@ class OrderViewset(viewsets.ModelViewSet):
     
     def list(self, request, *args, **kwargs):
         
-        if not request.user.is_superuser:
+        if not request.user.is_superuser and not request.user.is_analizer:
             if request.user.is_staff:
                 queryset = Order.objects.all()
                 # print([order.client.related_staff for order in queryset if ])
@@ -183,7 +183,7 @@ class PaymentPostView(viewsets.GenericViewSet):
     
     def list(self, request, *args, **kwargs):
         
-        if not request.user.is_superuser:
+        if not request.user.is_superuser and not request.user.is_analizer:
             return Response({'err':"You don't have permissions to do it"}, status=status.HTTP_406_NOT_ACCEPTABLE)
         else:
             queryset = self.filter_queryset(self.get_queryset())

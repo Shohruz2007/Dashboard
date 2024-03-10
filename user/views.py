@@ -111,9 +111,10 @@ class UserGetAPIView(viewsets.ModelViewSet):
         
         
         queryset = self.filter_queryset(self.get_queryset())
+        print('QUERYSET -->', queryset)
         
         queryset_filter = {
-                            'client':queryset.filter(is_client=True) if request.user.is_superuser else queryset.filter(related_staff=request.user.id),
+                            'client':queryset.filter(is_client=True) if request.user.is_superuser or request.user.is_analizer else queryset.filter(related_staff=request.user.id),
                             'staff':queryset.filter(is_staff=True),
                             'admin':queryset.filter(is_superuser=True)
                            }
@@ -121,8 +122,8 @@ class UserGetAPIView(viewsets.ModelViewSet):
         try:
             queryset = queryset_filter[user_type]
         except:pass
-        
         print('QUERYSET -->', queryset)
+        
         
         page = self.paginate_queryset(queryset)
         if page is not None:
@@ -209,6 +210,7 @@ class NotificationGetAPIView(viewsets.ReadOnlyModelViewSet):
     permission_classes = (IsAdminUserOrStaff,)
     pagination_class = UserListPagination
 
+
 def ClientPaymentCheck():
     orders = Order.objects.filter(is_finished=False)
     for order in orders:
@@ -223,8 +225,6 @@ def ClientPaymentCheck():
         print('required_payment -->', required_payment)
         if required_payment<0:
             continue #TODO DON'T Know what to do
-        
-        
-        
-        
+
+
 ClientPaymentCheck()

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import CustomUser
+from .models import CustomUser, Notification
 
 class UserModelAdmin(admin.ModelAdmin):
     readonly_fields = ('id',)
@@ -11,3 +11,4 @@ class UserModelAdmin(admin.ModelAdmin):
     # ordering=('username')
 
 admin.site.register(CustomUser, UserModelAdmin)
+admin.site.register(Notification)

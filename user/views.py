@@ -1,5 +1,8 @@
 import datetime
+import requests
 from dateutil.relativedelta import relativedelta
+
+import geopy
 
 from django.shortcuts import render
 from django.contrib.auth import get_user_model, authenticate, login
@@ -213,9 +216,15 @@ class NotificationGetAPIView(viewsets.ReadOnlyModelViewSet):
     pagination_class = UserListPagination
 
 
+
 def ClientPaymentCheck():
     orders = Order.objects.filter(is_finished=False)
     for order in orders:
+        if order.client.related_staff is None:
+            continue
+
+
+        print(order.client.related_staff)
         balance = order.balance
         product_price = order.product.price
         payment_deposit = order.payment_method.deposit
@@ -224,14 +233,46 @@ def ClientPaymentCheck():
         current_time = datetime.datetime.today()
         monthly_payment = float(product_price-payment_deposit+extra_payment)/(payment_period if not payment_period==0 else 1)
         required_payment = balance-payment_deposit
-        print('required_payment -->', required_payment)
+        # print('required_payment -->', required_payment)
         if required_payment<0:
             continue #TODO DON'T Know what to do
         
-        print('CURRENT ORDER AND MONTHLY PAYMENT -->', order, monthly_payment)
+        # print('CURRENT ORDER AND MONTHLY PAYMENT -->', order, monthly_payment)
         payment_period_progress = required_payment//monthly_payment
-        print('payment_period_progress -->', int(payment_period_progress))
+        # print('payment_period_progress -->', int(payment_period_progress))
         order_time = order.time_create
-        print(current_time.date() - (order_time+relativedelta(months=1*payment_period_progress)).date())
+        next_payment_days_left =  ((order_time+relativedelta(months=1*payment_period_progress)).date()-current_time.date()).days
+        
+        # print('\nnext_payment_days_left -->', next_payment_days_left)
+        message = None
+        if next_payment_days_left == 3:
+            message = f"{order.client.username} nomli klientning keyingi to'lovigacha 3 kun qoldi, to'lov summasi {monthly_payment}"
+            
+        if next_payment_days_left == -1:
+            message = f"{order.client.username} nomli klientning to'lovi 1 kunga o'tdi, to'lov summasi {monthly_payment}"
+        
+        if not message is None:
+            serializer = NotificationSerializer(data={'receiver':order.client.related_staff.id, 'message':message})
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            print(serializer.data)
 
-ClientPaymentCheck()
+
+class LocationAPIView(generics.GenericAPIView):
+    permission_classes = (AllowAny,)
+    http_method_names = ["get"]
+
+    def get(self, request):
+        
+        client_ip = request.META['REMOTE_ADDR']
+        
+        url = f"http://api.2ip.ua/geo.json/"
+    
+        response = requests.get(url)
+        geolocation_data = response.json()
+        print(geolocation_data)
+        
+        # geolocator = geopy.geocoders.Nominatim(user_agent='my-app')
+        # location = geolocator.reverse((geolocation_data['latitude'], geolocation_data['longitude']), exactly_one=True)
+        
+        return Response()

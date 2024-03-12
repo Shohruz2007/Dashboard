@@ -1,8 +1,10 @@
 import datetime
 import requests
 from dateutil.relativedelta import relativedelta
+import certifi
+import ssl
 
-import geopy
+from geopy.geocoders import Nominatim, options
 
 from django.shortcuts import render
 from django.contrib.auth import get_user_model, authenticate, login
@@ -272,7 +274,18 @@ class LocationAPIView(generics.GenericAPIView):
         geolocation_data = response.json()
         print(geolocation_data)
         
-        # geolocator = geopy.geocoders.Nominatim(user_agent='my-app')
-        # location = geolocator.reverse((geolocation_data['latitude'], geolocation_data['longitude']), exactly_one=True)
+        latitude = geolocation_data['latitude']
+        longitude = geolocation_data['longitude']
+        
+        print("\n Lattitude and longitude -->",latitude,'&', longitude, '\n')
+
+        ctx = ssl.create_default_context(cafile=certifi.where())
+        options.default_ssl_context = ctx
+        
+        geolocator = Nominatim(user_agent='my-app')
+        location = geolocator.reverse((latitude, longitude), exactly_one=True)
+        
+        
+        print(location)
         
         return Response()

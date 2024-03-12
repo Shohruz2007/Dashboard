@@ -172,6 +172,7 @@ class UserGetAPIView(viewsets.ModelViewSet):
         partial = kwargs.pop('partial', True)
         
         request_pk = request.parser_context['kwargs']['pk']
+        data:dict = request.data
         # print('PK -->', request_pk)
         if request_pk.lower() == 'self':
             request_pk = request.user.id
@@ -179,16 +180,35 @@ class UserGetAPIView(viewsets.ModelViewSet):
         instance = self.queryset.filter(pk=request_pk).first()
         
         if instance is None:
-            return Response({'err':"user no found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'err':"user not found"}, status=status.HTTP_404_NOT_FOUND)
         # print('USER OBJ -->', instance.__dict__)
         
         staff = request.user
-        if not staff.is_superuser and not instance.related_staff_id == staff.id and not request_pk==request.user.id:
-            return Response({'err':"you don't have enough permissions"}, status=status.HTTP_406_NOT_ACCEPTABLE)
+        if not staff.is_superuser:
+            if not instance.related_staff_id == staff.id and not request_pk==request.user.id:
+                return Response({'err':"you don't have enough permissions"}, status=status.HTTP_406_NOT_ACCEPTABLE)
+            
+            accepted_data = ['image', 'first_name', 'last_name', 'phone_number']
+            for key_name in data.keys():
+                if not key_name in accepted_data:
+                    return Response({'err':f"you don't have enough permissions to update {key_name}"}, status=status.HTTP_406_NOT_ACCEPTABLE)
+            
+
 
         
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        
+        serializer = self.get_serializer(instance, data=data, partial=partial)
         serializer.is_valid(raise_exception=True)
+        if 'password' in data.keys():
+            instance.set_password(data['password'])
+            instance.save()
+            new_data = data.copy()
+            new_data.pop('password')
+            serializer = self.get_serializer(instance, data=new_data, partial=partial)
+            serializer.is_valid(raise_exception=True)
+
+
+
         self.perform_update(serializer)
         
 

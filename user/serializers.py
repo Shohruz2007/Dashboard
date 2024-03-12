@@ -40,10 +40,12 @@ class UserCreateSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    
+
+
     class Meta:
         model = CustomUser
         fields = '__all__'
+
 
 class NotificationSerializer(serializers.ModelSerializer):
     

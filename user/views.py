@@ -7,7 +7,7 @@ import ssl
 from geopy.geocoders import Nominatim, options
 
 from django.shortcuts import render
-from django.contrib.auth import get_user_model, authenticate, login
+from django.contrib.auth import get_user_model, authenticate, login, backends
 from django.core.mail import send_mail
 from django.conf import settings
 
@@ -31,6 +31,7 @@ class LoginAPIView(generics.GenericAPIView):
     serializer_class = LoginSerializer
     permission_classes = (AllowAny,)
     http_method_names = ["post"]
+    authentication_classes = [backends.ModelBackend]
 
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
@@ -211,11 +212,23 @@ class UserGetAPIView(viewsets.ModelViewSet):
 
 
 
-class NotificationGetAPIView(viewsets.ReadOnlyModelViewSet):
-    queryset = Notification.objects.all()
+class NotificationGetAPIView(viewsets.GenericViewSet):
     serializer_class = NotificationSerializer
     permission_classes = (IsAdminUserOrStaff,)
     pagination_class = UserListPagination
+    
+    
+    def get(self, request, *args, **kwargs):
+        queryset = Notification.objects.filter(receiver = request.user)
+
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
 
 

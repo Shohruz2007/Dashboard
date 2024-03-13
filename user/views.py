@@ -76,10 +76,10 @@ class UserCreateView(generics.GenericAPIView):
         
         password = new_user_data.get('password')
 
-        if password is None and new_user_data['is_client'] in [['True'], 'True', True]:
-            new_user_data = new_user_data.copy()
-            password = new_user_data['password'] = new_user_data['username'] + '_code'
-            
+        if new_user_data['is_client'] in [['True'], 'True', True]:
+            if password is None:
+                new_user_data = new_user_data.copy()
+                password = new_user_data['password'] = new_user_data['username'] + '_code'
             new_user_data['related_staff'] = creator.id
 
 
@@ -293,32 +293,58 @@ def ClientPaymentCheck():
             print(serializer.data)
 
 
+def replace_russian_letters(text):
+
+    replacements = {'а': 'a','б': 'b','в': 'v','г': 'g','д': 'd','е': 'e','ё': 'yo','ж': 'j','з': 'z','и': 'i','й': 'y','к': 'k','л': 'l','м': 'm','н': 'n','о': 'o','п': 'p','р': 'r','с': 's','т': 't','у': 'u','ф': 'f','х': 'x','ц': 'ts','ч': 'ch','ш': 'sh','щ': 'sh','ъ': '','ы': 'i','ь': '','э': 'e','ю': 'yu','я': 'ya'} 
+
+
+    result = ''
+    for char in text:
+        if char.lower() in replacements:
+            replacement = replacements[char.lower()]
+            if char.isupper():
+                result += replacement.capitalize()
+            else:
+                result += replacement[0]
+
+        else:
+            result += char
+
+    return result
+
+
 class LocationAPIView(generics.GenericAPIView):
     permission_classes = (AllowAny,)
     http_method_names = ["get"]
 
     def get(self, request):
+        data = request.data
         
-        client_ip = request.META['REMOTE_ADDR']
+        latitude = data.get('latitude')
+        longitude = data.get('longitude')
         
-        url = f"http://api.2ip.ua/geo.json/"
-    
-        response = requests.get(url)
-        geolocation_data = response.json()
-        print(geolocation_data)
+        if None in [latitude, longitude]:
+            return Response({'err':"don't have enough info. please check data you giving"}, status=status.HTTP_406_NOT_ACCEPTABLE)
         
-        latitude = geolocation_data['latitude']
-        longitude = geolocation_data['longitude']
-        
-        print("\n Lattitude and longitude -->",latitude,'&', longitude, '\n')
+
 
         ctx = ssl.create_default_context(cafile=certifi.where())
         options.default_ssl_context = ctx
         
         geolocator = Nominatim(user_agent='my-app')
+        
+        
         location = geolocator.reverse((latitude, longitude), exactly_one=True)
-        
-        
-        print(location)
-        
-        return Response()
+        if not location is None:
+            location:list = location[0].split(',')
+
+
+            for obj_id,adress_obj in enumerate(location[:]):
+                if type(adress_obj) is str:
+                    location[obj_id] = replace_russian_letters(adress_obj)
+
+
+
+            location.reverse()
+            return Response({'address': location},)
+        return Response({'err': 'location not found'}, status=status.HTTP_404_NOT_FOUND)

@@ -314,10 +314,11 @@ def replace_russian_letters(text):
 
 
 class LocationAPIView(generics.GenericAPIView):
-    permission_classes = (AllowAny,)
-    http_method_names = ["get"]
 
-    def get(self, request):
+    permission_classes = (AllowAny,)
+    http_method_names = ["post"]
+
+    def post(self, request):
         data = request.data
         
         latitude = data.get('latitude')

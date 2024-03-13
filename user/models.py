@@ -1,6 +1,5 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
-
 from django.utils.translation import gettext_lazy as _
 
 
@@ -11,7 +10,7 @@ class CustomUser(AbstractUser):
                                 error_messages={
                                     "unique": _("A user with that username already exists."),
                                 },) 
-    image = models.ImageField(upload_to='Users', null=True, blank=True)  
+    image = models.FileField(upload_to='Users', null=True, blank=True)  
     email = models.EmailField(null=True, blank=True)
     phone_number = models.CharField(max_length=13, null=True, blank=True)
     birthday = models.DateField(null=True, blank=True)

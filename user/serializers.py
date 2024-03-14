@@ -40,11 +40,14 @@ class UserCreateSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-
-
+    username = serializers.CharField(max_length=150)
+    password = serializers.CharField(max_length=50)
+    
+    
     class Meta:
         model = CustomUser
-        fields = '__all__'
+        fields = ['id',"password","username","image","email","phone_number","birthday","is_staff","is_superuser","is_analizer","is_client","related_staff","last_location","time_create","time_update"]
+        
 
 
 class NotificationSerializer(serializers.ModelSerializer):

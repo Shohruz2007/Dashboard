@@ -27,22 +27,26 @@ from .serializers import LoginSerializer, UserSerializer, UserCreateSerializer, 
 
 
 class LoginAPIView(generics.GenericAPIView):
-    queryset = CustomUser.objects.all()
+    # queryset = CustomUser.objects.all()
     serializer_class = LoginSerializer
     permission_classes = (AllowAny,)
     http_method_names = ["post"]
     authentication_classes = [backends.ModelBackend]
 
     def post(self, request, *args, **kwargs):
-        serializer = self.serializer_class(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        data = serializer.data
-        username = data.get("username")
-        password = data.get("password")
+        data = request.data
+        username, password = data.get('username'), data.get('password')
+        if None in [username, password]:
+            return Response({'err':'Data is not full'},status=status.HTTP_406_NOT_ACCEPTABLE)
+            
         user = authenticate(username=username, password=password)
         if user:
             login(request, user)
-            return Response(self.get_tokens_for_user(user), status=status.HTTP_202_ACCEPTED)
+            
+            user_token = self.get_tokens_for_user(user)
+
+            user_data = UserSerializer(user)
+            return Response(user_data.data | user_token, status=status.HTTP_202_ACCEPTED)
         return Response(status=status.HTTP_400_BAD_REQUEST)
 
     def get_tokens_for_user(self, user):  # getting JWT token and is_staff boolean
@@ -50,9 +54,6 @@ class LoginAPIView(generics.GenericAPIView):
         return {
             "refresh": str(refresh),
             "access": str(refresh.access_token),
-            "is_staff": user.is_staff,
-            "is_superuser": user.is_superuser,
-            "is_analizer": user.is_analizer,
         }
 
 
@@ -117,33 +118,32 @@ class UserGetAPIView(viewsets.ModelViewSet):
 
         # print(params.get('user_type')[0])
         user_type = (params.get('user_type')[0] if not params.get('user_type') is None else None)
-        if not request.user.is_superuser and not request.user.is_analizer and (request.user.is_staff and not user_type == 'client'):
-            return Response({'error':"you don't have enough permissions"}, status=status.HTTP_406_NOT_ACCEPTABLE)
         
         
-        queryset = self.filter_queryset(self.get_queryset())
-        print('QUERYSET -->', queryset)
+        # if not request.user.is_superuser and not request.user.is_analizer and (request.user.is_staff and (not (user_type is None) or not (user_type == 'client'))):
+        #     return Response({'error':"you don't have enough permissions"}, status=status.HTTP_406_NOT_ACCEPTABLE)
+        
+        # if request.user.is_staff:
+        #     user_type = 'client'
+        
+        queryset = self.filter_queryset(self.get_queryset()) 
+        if not request.user.is_superuser and not request.user.is_analizer:
+            queryset = queryset.filter(related_staff=request.user.id)
+        # print('QUERYSET -->', queryset)
         
         queryset_filter = {
                             'client':queryset.filter(is_client=True) if request.user.is_superuser or request.user.is_analizer else queryset.filter(related_staff=request.user.id),
-                            'staff':queryset.filter(is_staff=True),
-                            'admin':queryset.filter(is_superuser=True)
+                            'staff':queryset.filter(is_staff=True) if request.user.is_superuser or request.user.is_analizer else [],
+                            'admin':queryset.filter(is_superuser=True) if request.user.is_superuser or request.user.is_analizer else []
                            }
 
         try:
             queryset = queryset_filter[user_type]
         except:pass
-        print('QUERYSET -->', queryset)
-        
-        
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
 
-        
         serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
+
+        return (Response(serializer.data) if not queryset == [] else Response({'err':"you don't have enough permissions"}, status=status.HTTP_406_NOT_ACCEPTABLE))
     
     
     def retrieve(self, request, *args, **kwargs):
@@ -350,5 +350,15 @@ class LocationAPIView(generics.GenericAPIView):
 
 
             location.reverse()
-            return Response({'address': location},)
+            
+            user = request.user
+            instance = CustomUser.objects.filter(pk=user.id).first()
+            if instance is None:
+                return Response({'err': 'user not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+            print('instance.last_location -->',instance.last_location)
+            instance.last_location = location
+            instance.save()
+            return Response(instance.last_location,)
         return Response({'err': 'location not found'}, status=status.HTTP_404_NOT_FOUND)

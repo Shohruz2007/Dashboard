@@ -27,7 +27,7 @@ class CustomUser(AbstractUser):
     is_client = models.BooleanField(_("client status"), default=False)
     related_staff = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL)
 
-
+    last_location = models.JSONField(null=True, blank=True)
     time_create = models.DateTimeField(auto_now_add=True, null=True)  # time when user has created
     time_update = models.DateTimeField(auto_now=True)  # time when user has updated
     
@@ -45,6 +45,10 @@ class CustomUser(AbstractUser):
 
     def __str__(self):
         return self.username
+    
+    @property
+    def get_pk(self):
+        return self.related_staff.pk if self.related_staff else 0
 
 
 

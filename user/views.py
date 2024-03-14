@@ -76,7 +76,10 @@ class UserCreateView(generics.GenericAPIView):
         
         password = new_user_data.get('password')
 
-        if new_user_data['is_client'] in [['True'], 'True', True]:
+        
+        
+        
+        if new_user_data.get('is_client') in [['True'], 'True', True]:
             if password is None:
                 new_user_data = new_user_data.copy()
                 password = new_user_data['password'] = new_user_data['username'] + '_code'

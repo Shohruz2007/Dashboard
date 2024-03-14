@@ -113,24 +113,16 @@ class UserGetAPIView(viewsets.ModelViewSet):
 
 
     def list(self, request, *args, **kwargs):
-
         params = dict(request.GET)
-
-        # print(params.get('user_type')[0])
         user_type = (params.get('user_type')[0] if not params.get('user_type') is None else None)
-        
-        
-        # if not request.user.is_superuser and not request.user.is_analizer and (request.user.is_staff and (not (user_type is None) or not (user_type == 'client'))):
-        #     return Response({'error':"you don't have enough permissions"}, status=status.HTTP_406_NOT_ACCEPTABLE)
-        
-        # if request.user.is_staff:
-        #     user_type = 'client'
-        
+
+
+
         queryset = self.filter_queryset(self.get_queryset()) 
         if not request.user.is_superuser and not request.user.is_analizer:
             queryset = queryset.filter(related_staff=request.user.id)
-        # print('QUERYSET -->', queryset)
-        
+
+
         queryset_filter = {
                             'client':queryset.filter(is_client=True) if request.user.is_superuser or request.user.is_analizer else queryset.filter(related_staff=request.user.id),
                             'staff':queryset.filter(is_staff=True) if request.user.is_superuser or request.user.is_analizer else [],
@@ -142,7 +134,6 @@ class UserGetAPIView(viewsets.ModelViewSet):
         except:pass
 
         serializer = self.get_serializer(queryset, many=True)
-
         return (Response(serializer.data) if not queryset == [] else Response({'err':"you don't have enough permissions"}, status=status.HTTP_406_NOT_ACCEPTABLE))
     
     

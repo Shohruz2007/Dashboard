@@ -155,7 +155,7 @@ class UserGetAPIView(viewsets.ModelViewSet):
         staff = request.user
         
         if staff.is_superuser or request.user.is_analizer or user_data['related_staff'] == staff.id or request_pk==request.user.id:
-            return Response(user_data)
+            return Response([user_data])
         else:
             return Response({'err':"you don't have enough permissions"}, status=status.HTTP_406_NOT_ACCEPTABLE)
     

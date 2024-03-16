@@ -140,6 +140,9 @@ class UserGetAPIView(viewsets.ModelViewSet):
     def retrieve(self, request, *args, **kwargs):
         request_pk = request.parser_context['kwargs']['pk']
         print('PK -->', request_pk)
+        # print('USER -->', request.user)
+        
+        
         if request_pk.lower() == 'self':
             request_pk = request.user.id
         

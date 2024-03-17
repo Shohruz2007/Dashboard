@@ -187,27 +187,36 @@ class PaymentPostView(viewsets.GenericViewSet):
         order = request_data.get('order')
         order = Order.objects.get(id=order)
         # print(order.balance)
-        order.balance = order.balance + float(payment_amount)
+        balance = order.balance = order.balance + float(payment_amount)
         print(order.balance)
         
-        print('ORDER PAYMENT PERIOD -->', order.payment_method.payment_period)
+        # print('ORDER PAYMENT PERIOD -->', order.payment_method.payment_period)
         
+        payment_deposit = order.payment_method.deposit
         total_coast = order.product.price + order.payment_method.extra_payment
-        balance = order.balance
+        extra_payment = order.payment_method.extra_payment
+        price = order.product.price
+        payment_period = order.payment_method.payment_period
+        
         if balance == total_coast:
             order.is_finished = True
-        payment_deposit = order.payment_method.deposit
-        per_month_payment = (total_coast-payment_deposit)/order.payment_method.payment_period
         
+        
+        
+        # print('FULL DATA -->', price,payment_deposit,extra_payment, payment_period)
+        per_month_payment = (price-payment_deposit+extra_payment)/(payment_period if not payment_period==0 else 1)
+        
+        print('ORDER MONTHLY PAYMENT PERIOD -->', per_month_payment)
 
         required_payment = balance-payment_deposit
         payment_period_progress = required_payment//per_month_payment
         print('PAYMENT PROGRESS -->', order, payment_period_progress)
         
-        # order.save()
+        order.payment_progress = payment_period_progress
+        order.save()
         
         
-        # serializer.save()
+        serializer.save()
         
         return Response(serializer.data)
     

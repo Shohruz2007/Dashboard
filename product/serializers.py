@@ -12,9 +12,19 @@ class CategorySerializer(serializers.ModelSerializer):
 
 
 class ProductSerializer(serializers.ModelSerializer):
+    id = serializers.PrimaryKeyRelatedField(read_only=True)
+    name = serializers.CharField(max_length=150)
+    price = serializers.FloatField()
+    rate_percentage = serializers.IntegerField()
+    
+    source = serializers.FileField()
+    description = serializers.CharField()
+    author = serializers.CharField(max_length=50)
+    extra_data = serializers.JSONField()
+    
     class Meta:
         model = Product
-        fields = '__all__'
+        fields = ["id", "name", "price", "rate_percentage", "source", "description", "author", "extra_data"]
 
 
 

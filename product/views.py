@@ -206,11 +206,11 @@ class PaymentPostView(viewsets.GenericViewSet):
         # print('FULL DATA -->', price,payment_deposit,extra_payment, payment_period)
         per_month_payment = (price-payment_deposit+extra_payment)/(payment_period if not payment_period==0 else 1)
         
-        print('ORDER MONTHLY PAYMENT PERIOD -->', per_month_payment)
+        # print('ORDER MONTHLY PAYMENT PERIOD -->', per_month_payment)
 
         required_payment = balance-payment_deposit
         payment_period_progress = required_payment//per_month_payment
-        print('PAYMENT PROGRESS -->', order, payment_period_progress)
+        # print('PAYMENT PROGRESS -->', order, payment_period_progress)
         
         order.payment_progress = payment_period_progress
         order.save()

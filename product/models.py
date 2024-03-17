@@ -44,8 +44,8 @@ class Order(models.Model):
     product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True, blank=True)
     client = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
 
-    
-    balance = models.FloatField()
+
+    balance = models.FloatField(default=0)
     payment_progress = models.IntegerField(default=-1)
     contract_data = models.FileField(null=True, blank=True)
 
@@ -54,7 +54,7 @@ class Order(models.Model):
 
     time_update = models.DateTimeField(auto_now=True)  # time when car order updated
     time_create = models.DateTimeField(auto_now_add=True, null=True, blank=True)  # time when order has created
-    
+
 
 
     def __str__(self):

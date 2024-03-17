@@ -177,6 +177,7 @@ class PaymentPostView(viewsets.GenericViewSet):
     permission_classes = (IsAdminUserOrStaff,)
     http_method_names = ["post", "get"]
 
+
     def post(self, request, *args, **kwargs):
         request_data = request.data 
         serializer = self.get_serializer(data=request.data)
@@ -185,16 +186,33 @@ class PaymentPostView(viewsets.GenericViewSet):
         payment_amount = request_data.get('payment_amount')
         order = request_data.get('order')
         order = Order.objects.get(id=order)
-        print(order.balance)
+        # print(order.balance)
         order.balance = order.balance + float(payment_amount)
         print(order.balance)
-        order.save()
         
-        serializer.save()
+        print('ORDER PAYMENT PERIOD -->', order.payment_method.payment_period)
+        
+        total_coast = order.product.price + order.payment_method.extra_payment
+        balance = order.balance
+        if balance == total_coast:
+            order.is_finished = True
+        payment_deposit = order.payment_method.deposit
+        per_month_payment = (total_coast-payment_deposit)/order.payment_method.payment_period
+        
+
+        required_payment = balance-payment_deposit
+        payment_period_progress = required_payment//per_month_payment
+        print('PAYMENT PROGRESS -->', order, payment_period_progress)
+        
+        # order.save()
+        
+        
+        # serializer.save()
         
         return Response(serializer.data)
     
-    
+
+
     def list(self, request, *args, **kwargs):
         
         if not request.user.is_superuser and not request.user.is_analizer:

@@ -27,7 +27,7 @@ from .serializers import LoginSerializer, UserSerializer, UserCreateSerializer, 
 
 
 class LoginAPIView(generics.GenericAPIView):
-    # queryset = CustomUser.objects.all()
+
     serializer_class = LoginSerializer
     permission_classes = (AllowAny,)
     http_method_names = ["post"]

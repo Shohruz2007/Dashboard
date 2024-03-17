@@ -182,27 +182,30 @@ class PaymentPostView(viewsets.GenericViewSet):
         request_data = request.data 
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
+
         payment_amount = request_data.get('payment_amount')
         order = request_data.get('order')
         order = Order.objects.get(id=order)
         # print(order.balance)
+        if not request.user.is_superuser and not (order.client.related_staff == request.user.id):
+            return Response({'err': "you don't have enough permissions"}, status=status.HTTP_406_NOT_ACCEPTABLE)
+
         balance = order.balance = order.balance + float(payment_amount)
         print(order.balance)
-        
+
         # print('ORDER PAYMENT PERIOD -->', order.payment_method.payment_period)
-        
+
         payment_deposit = order.payment_method.deposit
         total_coast = order.product.price + order.payment_method.extra_payment
         extra_payment = order.payment_method.extra_payment
         price = order.product.price
         payment_period = order.payment_method.payment_period
-        
+
         if balance == total_coast:
             order.is_finished = True
-        
-        
-        
+
+
+
         # print('FULL DATA -->', price,payment_deposit,extra_payment, payment_period)
         per_month_payment = (price-payment_deposit+extra_payment)/(payment_period if not payment_period==0 else 1)
         

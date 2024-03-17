@@ -38,9 +38,11 @@ class OrderSerializer(serializers.ModelSerializer):
     product = ProductSerializer(read_only=True)
     payment_method = PaymentMethodSerializer(read_only=True)
     client = UserSerializer(read_only=True)
+    time_update = serializers.DateTimeField(read_only=True)
+    time_create = serializers.DateTimeField(read_only=True)
     class Meta:
         model = Order
-        fields = '__all__'
+        fields = ["payment_method", "product", "client", "balance", "payment_progress", "contract_data", "extra_data", "is_finished", "time_update", "time_create"]
 
 
 class PaymentHistorySerializer(serializers.ModelSerializer):

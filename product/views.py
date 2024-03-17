@@ -44,7 +44,7 @@ class PaymentMethodViewset(viewsets.ModelViewSet):
 
 
 class OrderViewset(viewsets.ModelViewSet):
-    queryset = Order.objects.all()
+    queryset = Order.objects.all().select_related('client').select_related('product')
     serializer_class = OrderSerializer
     permission_classes = (IsAdminUserOrStaff,)
 

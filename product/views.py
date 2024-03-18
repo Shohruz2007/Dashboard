@@ -196,8 +196,9 @@ class PaymentPostView(viewsets.GenericViewSet):
         payment_amount = data.get('payment_amount')
         order = data.get('order')
         order = Order.objects.get(id=order)
-        # print(order.balance)
-        if not request.user.is_superuser and not (order.client.related_staff == request.user.id):
+        # print('IS TRUE STAFF --> ',order.client.related_staff)
+        # print('IS TRUE STAFF --> ',order.client.related_staff == request.user.id)
+        if not request.user.is_superuser and not (order.client.related_staff.id == request.user.id):
             return Response({'err': "you don't have enough permissions"}, status=status.HTTP_406_NOT_ACCEPTABLE)
 
         

@@ -238,8 +238,8 @@ class PaymentPostView(viewsets.GenericViewSet):
         
         
         serializer.save()
-        
-        return Response(serializer.data)
+        ord_serializer = OrderSerializer(order)
+        return Response(ord_serializer.data)
     
 
 

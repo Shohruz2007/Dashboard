@@ -172,13 +172,14 @@ class OrderViewset(viewsets.ModelViewSet):
     
 
 class PaymentPostView(viewsets.GenericViewSet):
-    queryset = PaymentHistory.objects.all()
+    queryset = PaymentHistory.objects.all().select_related('order')
     serializer_class = PaymentHistorySerializer
     permission_classes = (IsAdminUserOrStaff,)
     http_method_names = ["post", "get"]
 
 
     def post(self, request, *args, **kwargs):
+        print(request.META.get('HTTP_AUTHORIZATION'))
         params = dict(request.GET)
         try:
             data = {'order':int(params.get('order')[0]),'payment_amount':float(str(params.get('amount')[0]).replace(' ',''))}
@@ -190,7 +191,8 @@ class PaymentPostView(viewsets.GenericViewSet):
 
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
-
+        # print('ORDER INSIDE PAYMENT -->', serializer.data)
+        
         payment_amount = data.get('payment_amount')
         order = data.get('order')
         order = Order.objects.get(id=order)
@@ -199,15 +201,17 @@ class PaymentPostView(viewsets.GenericViewSet):
             return Response({'err': "you don't have enough permissions"}, status=status.HTTP_406_NOT_ACCEPTABLE)
 
         
-        balance = order.balance = order.balance + float(payment_amount)
+        balance = order.balance + float(payment_amount)
         total_coast = order.product.price + order.payment_method.extra_payment
         
         if balance > total_coast:
             return Response({'err': "Balace cann't be more than product price with extea payment"}, status=status.HTTP_406_NOT_ACCEPTABLE)
-            
+        else:
+            order.balance = balance
+
         print(order.balance)
 
-        # print('ORDER PAYMENT PERIOD -->', order.payment_method.payment_period)
+        print('ORDER PAYMENT PERIOD -->', order.payment_method.payment_period)
 
         payment_deposit = order.payment_method.deposit
         extra_payment = order.payment_method.extra_payment
@@ -243,15 +247,16 @@ class PaymentPostView(viewsets.GenericViewSet):
         if not request.user.is_superuser and not request.user.is_analizer:
             return Response({'err':"You don't have permissions to do it"}, status=status.HTTP_406_NOT_ACCEPTABLE)
         else:
-            queryset = self.filter_queryset(self.get_queryset())
+            queryset = PaymentHistory.objects.all()
             
 
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
+        # page = self.paginate_queryset(queryset)
+        # if page is not None:
+        #     serializer = self.get_serializer(page, many=True)
+        #     return self.get_paginated_response(serializer.data)
 
         serializer = self.get_serializer(queryset, many=True)
+
         return Response(serializer.data)
         
 

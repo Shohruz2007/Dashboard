@@ -37,8 +37,8 @@ class OrderSerializer(serializers.ModelSerializer):
 
 class PaymentHistorySerializer(serializers.ModelSerializer):
 
-    
+
     class Meta:
         model = PaymentHistory
-        fields = '__all__'
+        fields = ['id', 'payment_amount', 'order', 'time_create']
 

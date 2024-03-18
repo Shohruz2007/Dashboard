@@ -179,24 +179,37 @@ class PaymentPostView(viewsets.GenericViewSet):
 
 
     def post(self, request, *args, **kwargs):
-        request_data = request.data 
-        serializer = self.get_serializer(data=request.data)
+        params = dict(request.GET)
+        try:
+            data = {'order':int(params.get('order')[0]),'payment_amount':float(str(params.get('amount')[0]).replace(' ',''))}
+            print(data)
+        except Exception as err:
+            print('ERR IN PARAMS -->', err)
+            return Response({'err': "data is wrong"}, status=status.HTTP_406_NOT_ACCEPTABLE)
+            
+
+        serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
 
-        payment_amount = request_data.get('payment_amount')
-        order = request_data.get('order')
+        payment_amount = data.get('payment_amount')
+        order = data.get('order')
         order = Order.objects.get(id=order)
         # print(order.balance)
         if not request.user.is_superuser and not (order.client.related_staff == request.user.id):
             return Response({'err': "you don't have enough permissions"}, status=status.HTTP_406_NOT_ACCEPTABLE)
 
+        
         balance = order.balance = order.balance + float(payment_amount)
+        total_coast = order.product.price + order.payment_method.extra_payment
+        
+        if balance > total_coast:
+            return Response({'err': "Balace cann't be more than product price with extea payment"}, status=status.HTTP_406_NOT_ACCEPTABLE)
+            
         print(order.balance)
 
         # print('ORDER PAYMENT PERIOD -->', order.payment_method.payment_period)
 
         payment_deposit = order.payment_method.deposit
-        total_coast = order.product.price + order.payment_method.extra_payment
         extra_payment = order.payment_method.extra_payment
         price = order.product.price
         payment_period = order.payment_method.payment_period

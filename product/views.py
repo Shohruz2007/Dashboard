@@ -206,7 +206,7 @@ class PaymentPostView(viewsets.GenericViewSet):
         total_coast = order.product.price + order.payment_method.extra_payment
         
         if balance > total_coast:
-            return Response({'err': "Balace cann't be more than product price with extea payment"}, status=status.HTTP_406_NOT_ACCEPTABLE)
+            return Response({'err': "Balace cann't be more than product price with extra payment", 'max_payment':total_coast-order.balance}, status=status.HTTP_406_NOT_ACCEPTABLE)
         else:
             order.balance = balance
 

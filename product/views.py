@@ -10,7 +10,7 @@ from Admin_panel.permissions import IsAdminUserOrStaff, IsAdminUser, IsAdminUser
 from rest_framework_simplejwt.tokens import RefreshToken
 
 
-from .serializers import CustomUser, Category, CategorySerializer, Product, ProductSerializer, PaymentMethod, PaymentMethodSerializer, Order, OrderSerializer, PaymentHistory, PaymentHistorySerializer
+from .serializers import CustomUser, Category, CategorySerializer, Product, ProductSerializer, PaymentMethod, PaymentMethodSerializer, Order, OrderSerializer, OrderCreateSerializer, PaymentHistory, PaymentHistorySerializer
 
 
 class PrdCategoryViewset(viewsets.ModelViewSet):
@@ -78,7 +78,7 @@ class OrderViewset(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         
         
-        data = request.data
+        data = dict(request.data.copy())
         is_related = False
         if not request.user.is_superuser:
             if request.user.is_staff:
@@ -93,7 +93,11 @@ class OrderViewset(viewsets.ModelViewSet):
             return Response({"err":"you don't have permissions"}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
         
 
+        for name, value in dict(data).items():
+            if type(value) is list:
+                data[name] = value[0] 
         print('data --->',data)
+        
         payment = PaymentMethod.objects.filter(id=data.get('payment_method')).first()
         product = Product.objects.filter(id=data.get('product')).first()
         
@@ -110,7 +114,8 @@ class OrderViewset(viewsets.ModelViewSet):
             return Response(err, status=status.HTTP_406_NOT_ACCEPTABLE)
         
         
-        serializer = self.get_serializer(data=data)
+        print('BEFORE SERIALIZER')
+        serializer = OrderCreateSerializer(data=dict(data))
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)

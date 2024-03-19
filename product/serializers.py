@@ -34,6 +34,13 @@ class OrderSerializer(serializers.ModelSerializer):
         model = Order
         fields = ["id", "payment_method", "product", "client", "balance", "payment_progress", "contract_data", "extra_data", "is_finished", "time_update", "time_create"]
 
+class OrderCreateSerializer(serializers.ModelSerializer):
+    time_update = serializers.DateTimeField(read_only=True)
+    time_create = serializers.DateTimeField(read_only=True)
+    class Meta:
+        model = Order
+        fields = ["id", "payment_method", "product", "client", "balance", "payment_progress", "contract_data", "extra_data", "is_finished", "time_update", "time_create"]
+
 
 class PaymentHistorySerializer(serializers.ModelSerializer):
 

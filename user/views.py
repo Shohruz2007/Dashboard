@@ -10,6 +10,9 @@ from django.shortcuts import render
 from django.contrib.auth import get_user_model, authenticate, login, backends
 from django.core.mail import send_mail
 from django.conf import settings
+from django.core.cache import cache
+from django.views.decorators.cache import cache_page
+from django.utils.decorators import method_decorator
 
 
 from rest_framework import viewsets, status, generics
@@ -156,9 +159,10 @@ class UserGetAPIView(viewsets.ModelViewSet):
         
         user_data = serializer.data
         staff = request.user
-        # print('related_staff', user_data['related_staff'].get('id'))
         
-        if staff.is_superuser or request.user.is_analizer or (user_data['related_staff'].get('id') == staff.id) or request_pk==request.user.id:
+
+        
+        if staff.is_superuser or request.user.is_analizer or (not user_data['related_staff'] is None and user_data['related_staff'].get('id') == staff.id) or request_pk==request.user.id:
             return Response([user_data])
         else:
             return Response({'err':"you don't have enough permissions"}, status=status.HTTP_406_NOT_ACCEPTABLE)
@@ -235,7 +239,7 @@ class NotificationGetAPIView(viewsets.GenericViewSet):
     permission_classes = (IsAdminUserOrStaff,)
     pagination_class = UserListPagination
     
-    
+    @method_decorator(cache_page(60*60*6))
     def get(self, request, *args, **kwargs):
         queryset = Notification.objects.filter(receiver = request.user)
 

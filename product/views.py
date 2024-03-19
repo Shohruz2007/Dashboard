@@ -1,4 +1,8 @@
 import datetime
+
+from django.views.decorators.cache import cache_page
+from django.utils.decorators import method_decorator
+
 from rest_framework import viewsets, status, generics
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAdminUser
@@ -33,6 +37,18 @@ class PrdViewset(viewsets.ModelViewSet):
             instance._prefetched_objects_cache = {}
 
         return Response(serializer.data)
+    
+    @method_decorator(cache_page(60*30))
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
 
 
@@ -41,6 +57,17 @@ class PaymentMethodViewset(viewsets.ModelViewSet):
     serializer_class = PaymentMethodSerializer
     permission_classes = (IsAdminUserOrStaffReadOnly,)
 
+    @method_decorator(cache_page(60*30))
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
 
 class OrderViewset(viewsets.ModelViewSet):

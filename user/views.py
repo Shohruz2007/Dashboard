@@ -340,7 +340,8 @@ class LocationAPIView(generics.GenericAPIView):
 
             for obj_id,adress_obj in enumerate(location[:]):
                 if type(adress_obj) is str:
-                    location[obj_id] = replace_russian_letters(adress_obj)
+                    adress_obj = adress_obj.strip()
+                    location[obj_id] = ' '+replace_russian_letters(adress_obj)
 
 
 
@@ -353,7 +354,9 @@ class LocationAPIView(generics.GenericAPIView):
 
 
             print('instance.last_location -->',instance.last_location)
-            instance.last_location = location
+            
+            instance.last_location = location[2:]
             instance.save()
+            
             return Response(instance.last_location,)
         return Response({'err': 'location not found'}, status=status.HTTP_404_NOT_FOUND)

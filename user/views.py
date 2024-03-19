@@ -67,7 +67,13 @@ class UserCreateView(generics.GenericAPIView):
     http_method_names = ["post"]
     
     def post(self, request, *args, **kwargs):
-        new_user_data:dict = request.data
+        new_user_data:dict = dict(request.data.copy())
+        
+        
+        for name, value in dict(new_user_data).items():
+            if type(value) is list:
+                new_user_data[name] = value[0]
+        
         creator = request.user
         
         permissions = {'is_superuser':[creator.is_superuser], "is_staff":[creator.is_superuser], "is_analizer":[creator.is_superuser]}

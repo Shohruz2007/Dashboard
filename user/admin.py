@@ -3,12 +3,9 @@ from .models import CustomUser, Notification
 
 class UserModelAdmin(admin.ModelAdmin):
     readonly_fields = ('id',)
-    # fields = ('username','id',)
     list_display_links = ('username','email')
-    list_display = ('id','username','email')
+    list_display = ('id','username','email','is_staff','is_client')
     list_filter = ('id',)
-    # list_per_page = 1
-    # ordering=('username')
 
 admin.site.register(CustomUser, UserModelAdmin)
 admin.site.register(Notification)

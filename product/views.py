@@ -81,6 +81,13 @@ class OrderViewset(viewsets.ModelViewSet):
         if not request.user.is_superuser:
             if request.user.is_staff:
                 client_id = data.get("client")
+
+                if type(client_id) is None:
+                    return Response({"err":"No client data"}, status=status.HTTP_404_NOT_FOUND)
+                    
+                if type(client_id) is list:
+                    client_id = client_id[0]
+                
                 client = CustomUser.objects.filter(id=client_id).first()
                 if not client is None:
                     is_related = client.related_staff==request.user
@@ -93,7 +100,8 @@ class OrderViewset(viewsets.ModelViewSet):
 
         for name, value in dict(data).items():
             if type(value) is list:
-                data[name] = value[0] 
+                data[name] = value[0]
+        
         print('data --->',data)
         
         payment = PaymentMethod.objects.filter(id=data.get('payment_method')).first()

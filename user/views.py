@@ -80,7 +80,7 @@ class UserCreateView(generics.GenericAPIView):
         
         
         
-        if new_user_data.get('is_client') in [['True'], 'True', True]:
+        if new_user_data.get('is_client') in [['True'], 'True', True, 'true', ['true']]:
             if password is None:
                 new_user_data = new_user_data.copy()
                 password = new_user_data['password'] = new_user_data['username'] + '_code'
@@ -156,8 +156,9 @@ class UserGetAPIView(viewsets.ModelViewSet):
         
         user_data = serializer.data
         staff = request.user
+        # print('related_staff', user_data['related_staff'].get('id'))
         
-        if staff.is_superuser or request.user.is_analizer or user_data['related_staff'] == staff.id or request_pk==request.user.id:
+        if staff.is_superuser or request.user.is_analizer or (user_data['related_staff'].get('id') == staff.id) or request_pk==request.user.id:
             return Response([user_data])
         else:
             return Response({'err':"you don't have enough permissions"}, status=status.HTTP_406_NOT_ACCEPTABLE)

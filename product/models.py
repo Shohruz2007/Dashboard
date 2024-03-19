@@ -46,7 +46,7 @@ class Order(models.Model):
 
 
     balance = models.FloatField(default=0)
-    payment_progress = models.IntegerField(default=-1)
+    payment_progress = models.IntegerField(default=0)
     contract_data = models.FileField(null=True, blank=True)
 
     extra_data = models.JSONField(null=True, blank=True)

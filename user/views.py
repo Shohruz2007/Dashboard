@@ -239,7 +239,7 @@ class NotificationGetAPIView(viewsets.GenericViewSet):
     permission_classes = (IsAdminUserOrStaff,)
     pagination_class = UserListPagination
     
-    @method_decorator(cache_page(60*60*6))
+    # @method_decorator(cache_page(60*60*6))
     def get(self, request, *args, **kwargs):
         queryset = Notification.objects.filter(receiver = request.user)
 

@@ -38,7 +38,7 @@ class PrdViewset(viewsets.ModelViewSet):
 
         return Response(serializer.data)
     
-    @method_decorator(cache_page(60*30))
+
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
 
@@ -57,7 +57,7 @@ class PaymentMethodViewset(viewsets.ModelViewSet):
     serializer_class = PaymentMethodSerializer
     permission_classes = (IsAdminUserOrStaffReadOnly,)
 
-    @method_decorator(cache_page(60*30))
+
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
 
@@ -76,8 +76,6 @@ class OrderViewset(viewsets.ModelViewSet):
     permission_classes = (IsAdminUserOrStaff,)
 
     def create(self, request, *args, **kwargs):
-        
-        
         data = dict(request.data.copy())
         is_related = False
         if not request.user.is_superuser:

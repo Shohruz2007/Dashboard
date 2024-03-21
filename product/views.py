@@ -422,7 +422,7 @@ class FullDataView(viewsets.GenericViewSet):
             
         start_time = time.time()    
 
-        last_payments = [{'payment_amount':payment.payment_amount, 'client':(payment.order.client.username if not payment.order is None else None), 'time_create':payment.time_create} for payment in payments.order_by('-time_create')]
+        last_payments = [{'payment_amount':payment.payment_amount, 'client':(payment.order.client.first_name if not payment.order is None else None), 'time_create':payment.time_create} for payment in payments.order_by('-time_create')]
 
         end_time = time.time()
         execution_time = end_time - start_time

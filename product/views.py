@@ -368,9 +368,9 @@ class DashboardBaseDataView(viewsets.GenericViewSet):
             
             most_saled_product,sales_amount = find_most_repeated_object(products_data)
             yearly_data.append({
-                'month': months[month_number],
-                'product_name':most_saled_product.name if not most_saled_product is None else None, 
-                'sales_amount': sales_amount,
+                'Oy': months[month_number],
+                'Mahsulot':most_saled_product.name if not most_saled_product is None else None, 
+                'Sotuvlar soni': sales_amount,
             })
         
         
@@ -431,7 +431,7 @@ class FullDataView(viewsets.GenericViewSet):
         last_payments = last_payments[:int(last_payments_amount)]
             
         
-        months = [0, 'Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr']
+        months = [0, 'Yanv', 'Fevr', 'Mart', 'Apre', 'May', 'Iyun', 'Iyul', 'Avgu', 'Sent', 'Okty', 'Noya', 'Deka']
         
         current_year_payments = [payment for payment in payments if payment.time_create.year == current_time.year]
         yearly_data = []
@@ -445,8 +445,8 @@ class FullDataView(viewsets.GenericViewSet):
                     except:pass
             
             yearly_data.append({
-                'month': months[month_number],
-                'sales': month_sales
+                'Oy': months[month_number],
+                'Sotuvlar soni': month_sales
             })
             
         response_data = {

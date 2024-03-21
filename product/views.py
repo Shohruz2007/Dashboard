@@ -14,7 +14,7 @@ from Admin_panel.permissions import IsAdminUserOrStaff, IsAdminUser, IsAdminUser
 from rest_framework_simplejwt.tokens import RefreshToken
 
 
-from .serializers import CustomUser, Category, CategorySerializer, Product, ProductSerializer, PaymentMethod, PaymentMethodSerializer, Order, OrderSerializer, OrderCreateSerializer, PaymentHistory, PaymentHistorySerializer
+from .serializers import CustomUser, Category, CategorySerializer, Product, ProductSerializer, PaymentMethod, PaymentMethodSerializer, Order, OrderSerializer, OrderCreateSerializer, PaymentHistory, PaymentHistorySerializer, PaymentCreateHistorySerializer
 
 
 class PrdCategoryViewset(viewsets.ModelViewSet):
@@ -223,7 +223,7 @@ class PaymentPostView(viewsets.GenericViewSet):
 
 
     def post(self, request, *args, **kwargs):
-        print(request.META.get('HTTP_AUTHORIZATION'))
+        # print(request.META.get('HTTP_AUTHORIZATION'))
         params = dict(request.GET)
         try:
             data = {'order':int(params.get('order')[0]),'payment_amount':float(str(params.get('amount')[0]).replace(' ',''))}
@@ -233,13 +233,16 @@ class PaymentPostView(viewsets.GenericViewSet):
             return Response({'err': "data is wrong"}, status=status.HTTP_406_NOT_ACCEPTABLE)
             
 
-        serializer = self.get_serializer(data=data)
+        serializer = PaymentCreateHistorySerializer(data=data)
         serializer.is_valid(raise_exception=True)
         # print('ORDER INSIDE PAYMENT -->', serializer.data)
         
         payment_amount = data.get('payment_amount')
         order = data.get('order')
-        order = Order.objects.get(id=order)
+        order = Order.objects.filter(id=order).first()
+        if order is None:
+            return Response({'err': "order data is wrong"}, status=status.HTTP_406_NOT_ACCEPTABLE)
+            
         # print('IS TRUE STAFF --> ',order.client.related_staff)
         # print('IS TRUE STAFF --> ',order.client.related_staff == request.user.id)
         if not request.user.is_superuser and not (order.client.related_staff.id == request.user.id):
@@ -280,7 +283,7 @@ class PaymentPostView(viewsets.GenericViewSet):
         order.payment_progress = payment_period_progress
         order.save()
         
-        
+        # print(serializer.data)
         serializer.save()
         ord_serializer = OrderSerializer(order)
         return Response(ord_serializer.data)
@@ -421,7 +424,8 @@ class FullDataView(viewsets.GenericViewSet):
             last_payments_amount = 5
             
         start_time = time.time()    
-
+        
+        print(payments[0].order)
         last_payments = [{'payment_amount':payment.payment_amount, 'client':(payment.order.client.first_name if not payment.order is None else None), 'product':(payment.order.product.name if not payment.order is None else None), 'time_create':payment.time_create} for payment in payments.order_by('-time_create')]
 
         end_time = time.time()

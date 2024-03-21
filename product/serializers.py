@@ -48,8 +48,14 @@ class OrderShortdataSerializer(serializers.ModelSerializer):
         model = Order
         fields = ["id", "client"]
 
+
 class PaymentHistorySerializer(serializers.ModelSerializer):
     order = OrderShortdataSerializer(read_only=True)
+    class Meta:
+        model = PaymentHistory
+        fields = ['id', 'payment_amount', 'order', 'time_create']
+
+class PaymentCreateHistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = PaymentHistory
         fields = ['id', 'payment_amount', 'order', 'time_create']

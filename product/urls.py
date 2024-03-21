@@ -13,6 +13,7 @@ router.register(r'', PrdViewset, basename='')
 # router.register(r'full_data', FullDataView, basename='full_data')
 
 urlpatterns = [
+    path('base_data/', DashboardBaseDataView.as_view({'get': 'get'})),
     path('full_data/', FullDataView.as_view({'get': 'get'})),
     path('payment/', PaymentPostView.as_view({'post': 'post', 'get': 'list'})),
     path('', include(router.urls)),

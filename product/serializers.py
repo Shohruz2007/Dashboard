@@ -3,7 +3,7 @@ from django.core import exceptions
 import django.contrib.auth.password_validation as validators
 
 from .models import CustomUser, Category, Product, Order, PaymentMethod, PaymentHistory
-from user.serializers import UserSerializer
+from user.serializers import UserSerializer, RelatedUserSerializer
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -42,10 +42,19 @@ class OrderCreateSerializer(serializers.ModelSerializer):
         fields = ["id", "payment_method", "product", "client", "balance", "payment_progress", "contract_data", "extra_data", "is_finished", "time_update", "time_create"]
 
 
+class OrderShortdataSerializer(serializers.ModelSerializer):
+    client = RelatedUserSerializer(read_only=True)
+    class Meta:
+        model = Order
+        fields = ["id", "client"]
+
 class PaymentHistorySerializer(serializers.ModelSerializer):
-
-
+    order = OrderShortdataSerializer(read_only=True)
     class Meta:
         model = PaymentHistory
         fields = ['id', 'payment_amount', 'order', 'time_create']
 
+class DashboardSerializer(serializers.Serializer):
+    payment = PaymentHistorySerializer()
+    order = OrderSerializer()
+    product = ProductSerializer()

@@ -1,4 +1,8 @@
 import datetime
+import threading
+from multiprocessing.dummy import Pool as ThreadPool
+import time
+import queue
 
 from django.views.decorators.cache import cache_page
 from django.utils.decorators import method_decorator
@@ -301,25 +305,23 @@ class PaymentPostView(viewsets.GenericViewSet):
         return Response(serializer.data)
         
 
-class FullDataView(viewsets.GenericViewSet):
-    # queryset = Order.objects.all()
-
+class DashboardBaseDataView(viewsets.GenericViewSet):
 
     permission_classes = (IsAdminUser,)
     http_method_names = ["get"]
-    
+
+
     def get(self, request, *args, **kwargs):
         params = request.query_params
         
+        
         users = CustomUser.objects.all()
         products = Product.objects.all()
-        orders = Order.objects.all()
-        payments = PaymentHistory.objects.all()
-        clients = users.filter(is_client=True)
-        staffs = users.filter(is_staff=True)
-        
+        orders = Order.objects.all().select_related('product')
+        payments = PaymentHistory.objects.all().select_related('order')
         current_time = datetime.datetime.today()
-        # print('\n\n',current_time, '\n')
+        
+        clients = users.filter(is_client=True)
         
         top_courses_amount = params.get('top_courses')
         
@@ -331,24 +333,7 @@ class FullDataView(viewsets.GenericViewSet):
         sorted_ordered_courses = sorted_ordered_courses[:int(top_courses_amount)]
         sorted_ordered_courses = [{"id":ordered_course.id, "name":ordered_course.name, 'price':ordered_course.price, 'amount':ordered_courses.count(ordered_course)} for ordered_course in sorted_ordered_courses]
 
-        last_courses_amount = params.get('last_orders')
-        last_courses = [OrderSerializer(order).data for order in orders.order_by('-time_create')]
-        if last_courses_amount is None or not last_courses_amount.isnumeric():
-            last_courses_amount = 10
-
-        last_courses = last_courses[:int(last_courses_amount)]
-            
         
-        
-        current_year_payments = [payment for payment in payments if payment.time_create.year == current_time.year]
-        yearly_data = {}
-        for order in current_year_payments:
-            try:
-                yearly_data.update({order.time_create.strftime('%B'):order.payment_amount+yearly_data[order.time_create.strftime('%B')]})
-            except:
-                yearly_data.update({order.time_create.strftime('%B'):order.payment_amount})
-        
-        # print("\n EXTRA data -->", (current_time.date() - users[0].time_create.date()).days)
         response_data = {
             "product_len":len(products),
             "order_len":len(orders),
@@ -365,13 +350,59 @@ class FullDataView(viewsets.GenericViewSet):
                     "sale_amount":sum([payment.payment_amount for payment in payments if payment.time_create.year == current_time.year])
                 },
             "most_seller_courses":sorted_ordered_courses,
-            "last_orders":last_courses,
+
+        }
+        
+        return Response(response_data)
+
+class FullDataView(viewsets.GenericViewSet):
+
+    permission_classes = (IsAdminUser,)
+    http_method_names = ["get"]
+
+
+    def get(self, request, *args, **kwargs):
+
+        params = request.query_params
+
+        payments = PaymentHistory.objects.all().select_related('order')
+
+        current_time = datetime.datetime.today()
+        # print('\n\n',current_time, '\n')
+        
+        
+        last_payments_amount = params.get('last_pays')
+        if last_payments_amount is None or not last_payments_amount.isnumeric():
+            last_payments_amount = 5
+            
+        last_payments = [{'payment_amount':payment.payment_amount, 'client':(payment.order.client.username if not payment.order is None else None), 'time_create':payment.time_create} for payment in payments.order_by('-time_create')]
+
+        last_payments = last_payments[:int(last_payments_amount)]
+            
+        
+        months = [0, 'Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr']
+        
+        current_year_payments = [payment for payment in payments if payment.time_create.year == current_time.year]
+        yearly_data = []
+        for month_number in range(1,13):
+            month_sales = 0
+            for payment in current_year_payments:
+                # print('current_time --> ', current_time.month)
+                if payment.time_create.month == month_number:
+                    try:
+                        month_sales += payment.payment_amount
+                    except:pass
+            
+            yearly_data.append({
+                'month': months[month_number],
+                'sales': month_sales
+            })
+            
+        response_data = {
+            "last_payments":last_payments,
             "yearly_data":yearly_data,
-                
         }
 
-
-        
         
         return Response(response_data)
 

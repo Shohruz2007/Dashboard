@@ -310,7 +310,6 @@ class DashboardBaseDataView(viewsets.GenericViewSet):
     permission_classes = (IsAdminUser,)
     http_method_names = ["get"]
 
-
     def get(self, request, *args, **kwargs):
         params = request.query_params
         
@@ -318,21 +317,62 @@ class DashboardBaseDataView(viewsets.GenericViewSet):
         users = CustomUser.objects.all()
         products = Product.objects.all()
         orders = Order.objects.all().select_related('product')
-        payments = PaymentHistory.objects.all().select_related('order')
+        payments = PaymentHistory.objects.all()
         current_time = datetime.datetime.today()
         
         clients = users.filter(is_client=True)
         
-        top_courses_amount = params.get('top_courses')
+        # top_courses_amount = params.get('top_courses')
         
-        ordered_courses = [order.product for order in orders]
-        sorted_ordered_courses = list(set(sorted(ordered_courses, key=lambda obj: ordered_courses.count(obj), reverse=True)))
-        if top_courses_amount is None or not top_courses_amount.isnumeric():
-            top_courses_amount = 10
+        # ordered_courses = [order.product for order in orders]
+        # sorted_ordered_courses = list(set(sorted(ordered_courses, key=lambda obj: ordered_courses.count(obj), reverse=True)))
+        # if top_courses_amount is None or not top_courses_amount.isnumeric():
+        #     top_courses_amount = 10
             
-        sorted_ordered_courses = sorted_ordered_courses[:int(top_courses_amount)]
-        sorted_ordered_courses = [{"id":ordered_course.id, "name":ordered_course.name, 'price':ordered_course.price, 'amount':ordered_courses.count(ordered_course)} for ordered_course in sorted_ordered_courses]
+        # sorted_ordered_courses = sorted_ordered_courses[:int(top_courses_amount)]
+        # sorted_ordered_courses = [{"id":ordered_course.id, "name":ordered_course.name, 'price':ordered_course.price, 'amount':ordered_courses.count(ordered_course)} for ordered_course in sorted_ordered_courses]
+        
+        # for order in orders:
+            
+        
+        months = [0, 'Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr']
+        
+        current_year_orders = [order for order in orders if order.time_create.year == current_time.year]
+        yearly_data = []
+        for month_number in range(1,13):
+            products_data = []
+            for order in current_year_orders:
+                # print('current_time --> ', current_time.month)
+                if order.time_create.month == month_number:
+                    products_data.append(order.product)
+            
+            def find_most_repeated_object(collection):
+                counts = {}
+                most_repeated_obj = None
+                max_count = 0
 
+                # Count the occurrences of each object in the collection
+                for obj in collection:
+                    if obj in counts:
+                        counts[obj] += 1
+                    else:
+                        counts[obj] = 1
+
+                    # Update the most repeated object if necessary
+                    if counts[obj] > max_count:
+                        max_count = counts[obj]
+                        most_repeated_obj = obj
+
+                return most_repeated_obj, max_count
+            
+            
+            most_saled_product,sales_amount = find_most_repeated_object(products_data)
+            yearly_data.append({
+                'month': months[month_number],
+                'product_name':most_saled_product.name if not most_saled_product is None else None, 
+                'sales_amount': sales_amount,
+            })
+        
         
         response_data = {
             "product_len":len(products),
@@ -349,7 +389,8 @@ class DashboardBaseDataView(viewsets.GenericViewSet):
             "current_year":{
                     "sale_amount":sum([payment.payment_amount for payment in payments if payment.time_create.year == current_time.year])
                 },
-            "most_seller_courses":sorted_ordered_courses,
+            # "most_seller_courses":sorted_ordered_courses,
+            "yearly_course_data":yearly_data,
 
         }
         
@@ -360,13 +401,17 @@ class FullDataView(viewsets.GenericViewSet):
     permission_classes = (IsAdminUser,)
     http_method_names = ["get"]
 
-
+    @method_decorator(cache_page(60))
     def get(self, request, *args, **kwargs):
-
         params = request.query_params
+        start_time = time.time()
 
         payments = PaymentHistory.objects.all().select_related('order')
-
+        
+        end_time = time.time()
+        execution_time = end_time - start_time
+        print(execution_time)
+        
         current_time = datetime.datetime.today()
         # print('\n\n',current_time, '\n')
         
@@ -375,8 +420,14 @@ class FullDataView(viewsets.GenericViewSet):
         if last_payments_amount is None or not last_payments_amount.isnumeric():
             last_payments_amount = 5
             
+        start_time = time.time()    
+
         last_payments = [{'payment_amount':payment.payment_amount, 'client':(payment.order.client.username if not payment.order is None else None), 'time_create':payment.time_create} for payment in payments.order_by('-time_create')]
 
+        end_time = time.time()
+        execution_time = end_time - start_time
+        print(execution_time)
+        
         last_payments = last_payments[:int(last_payments_amount)]
             
         

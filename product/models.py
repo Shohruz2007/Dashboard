@@ -11,6 +11,7 @@ class PaymentMethod(models.Model):
     deposit = models.FloatField()
     extra_payment = models.FloatField(default=0)
     extra_payment_rate = models.IntegerField(default=0)
+    description = models.TextField(null=True, blank=True)
 
     def __str__(self):
         return self.name
@@ -55,6 +56,7 @@ class Order(models.Model):
     time_update = models.DateTimeField(auto_now=True)  # time when car order updated
     time_create = models.DateTimeField(auto_now_add=True, null=True, blank=True)  # time when order has created
 
+    is_active = models.BooleanField(default=True)
 
 
     def __str__(self):

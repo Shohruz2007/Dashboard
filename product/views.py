@@ -152,16 +152,30 @@ class OrderViewset(viewsets.ModelViewSet):
 
     
     def list(self, request, *args, **kwargs):
+    
+        params = dict(request.GET)
+        is_active = params.get('is_active')
+        print('IS ACTIVE -->', is_active)
         
+        if type(is_active) is list:
+            is_active = is_active[0]
+            
+        if type(is_active) is str and is_active.lower() == 'false':
+            is_active = False
+        else:
+            is_active = True 
+
+        # print('IS ACTIVE -->', is_active)
         if not request.user.is_superuser and not request.user.is_analizer:
             if request.user.is_staff:
-                queryset = Order.objects.all()
+                queryset = Order.objects.filter(is_active=is_active)
                 # print([order.client.related_staff for order in queryset if ])
                 queryset = [order for order in queryset if not order.client.related_staff is None and order.client.related_staff.id == request.user.id]
 
         else:
-            queryset = self.filter_queryset(self.get_queryset())
-            
+            queryset = Order.objects.filter(is_active=is_active)
+        
+        
 
         page = self.paginate_queryset(queryset)
         if page is not None:
@@ -310,32 +324,41 @@ class PaymentPostView(viewsets.GenericViewSet):
 
 class DashboardBaseDataView(viewsets.GenericViewSet):
 
-    permission_classes = (IsAdminUser,)
+    permission_classes = (IsAdminUserOrStaff,)
     http_method_names = ["get"]
 
     def get(self, request, *args, **kwargs):
         params = request.query_params
+        is_staff = request.user.is_staff
+        users = None
+        orders = None
+        payments = None
+        
+        if is_staff:
+            users = CustomUser.objects.filter(related_staff=request.user.id)
+            print('STAFF USERS -->', users)
+            user_pks = tuple([user.id for user in users])
+            orders = Order.objects.filter(client=user_pks).select_related('product')
+            print('STAFF Orders -->', users)
+            payments = PaymentHistory.objects.all()
+
+        else:
+            orders = Order.objects.all().select_related('product')
+            payments = PaymentHistory.objects.all()
+            users = CustomUser.objects.all()
+            
+            
         
         
-        users = CustomUser.objects.all()
-        products = Product.objects.all()
+        users = CustomUser.objects.filter(related_staff=request.user.id)
         orders = Order.objects.all().select_related('product')
+        products = Product.objects.all()
         payments = PaymentHistory.objects.all()
+        
         current_time = datetime.datetime.today()
         
         clients = users.filter(is_client=True)
         
-        # top_courses_amount = params.get('top_courses')
-        
-        # ordered_courses = [order.product for order in orders]
-        # sorted_ordered_courses = list(set(sorted(ordered_courses, key=lambda obj: ordered_courses.count(obj), reverse=True)))
-        # if top_courses_amount is None or not top_courses_amount.isnumeric():
-        #     top_courses_amount = 10
-            
-        # sorted_ordered_courses = sorted_ordered_courses[:int(top_courses_amount)]
-        # sorted_ordered_courses = [{"id":ordered_course.id, "name":ordered_course.name, 'price':ordered_course.price, 'amount':ordered_courses.count(ordered_course)} for ordered_course in sorted_ordered_courses]
-        
-        # for order in orders:
             
         
         months = [0, 'Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr']
@@ -401,7 +424,7 @@ class DashboardBaseDataView(viewsets.GenericViewSet):
 
 class FullDataView(viewsets.GenericViewSet):
 
-    permission_classes = (IsAdminUser,)
+    permission_classes = (IsAdminUserOrStaff,)
     http_method_names = ["get"]
 
     @method_decorator(cache_page(60))
@@ -450,7 +473,7 @@ class FullDataView(viewsets.GenericViewSet):
             
             yearly_data.append({
                 'Oy': months[month_number],
-                'Sotuvlar soni': month_sales
+                'Sotuvlar summasi': month_sales
             })
             
         response_data = {

@@ -142,7 +142,13 @@ class UserGetAPIView(viewsets.ModelViewSet):
             queryset = queryset_filter[user_type]
         except:pass
 
-        serializer = self.get_serializer(queryset, many=True)
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        
+        # serializer = self.get_serializer(queryset, many=True)
         return (Response(serializer.data) if not queryset == [] else Response({'err':"you don't have enough permissions"}, status=status.HTTP_406_NOT_ACCEPTABLE))
     
     

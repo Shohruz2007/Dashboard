@@ -329,31 +329,34 @@ class DashboardBaseDataView(viewsets.GenericViewSet):
 
     def get(self, request, *args, **kwargs):
         params = request.query_params
-        is_staff = request.user.is_staff
+        is_superuser = request.user.is_superuser
         users = None
         orders = None
         payments = None
         
-        if is_staff:
-            users = CustomUser.objects.filter(related_staff=request.user.id)
-            print('STAFF USERS -->', users)
-            user_pks = tuple([user.id for user in users])
-            orders = Order.objects.filter(client=user_pks).select_related('product')
-            print('STAFF Orders -->', users)
-            payments = PaymentHistory.objects.all()
-
-        else:
+        if is_superuser:
             orders = Order.objects.all().select_related('product')
             payments = PaymentHistory.objects.all()
             users = CustomUser.objects.all()
+
+        else:
+            users = CustomUser.objects.filter(related_staff=request.user.id)
+            # print('STAFF USERS -->', users)
+            user_pks = tuple([user.id for user in users])
+            orders = Order.objects.filter(client=user_pks).select_related('product')
+            # print('STAFF Orders -->', orders)
+            order_pks = tuple([order.id for order in orders])
+            payments = PaymentHistory.objects.filter(order=order_pks)
+            print('STAFF payments -->', payments)
             
             
         
         
-        users = CustomUser.objects.filter(related_staff=request.user.id)
-        orders = Order.objects.all().select_related('product')
+        # users = CustomUser.objects.filter(related_staff=request.user.id)
+        # orders = Order.objects.all().select_related('product')
+        # payments = PaymentHistory.objects.all()
+        
         products = Product.objects.all()
-        payments = PaymentHistory.objects.all()
         
         current_time = datetime.datetime.today()
         
@@ -430,13 +433,29 @@ class FullDataView(viewsets.GenericViewSet):
     @method_decorator(cache_page(60))
     def get(self, request, *args, **kwargs):
         params = request.query_params
-        start_time = time.time()
-
-        payments = PaymentHistory.objects.all().select_related('order')
+        # start_time = time.time()
+        is_superuser = request.user.is_superuser
+        payments = None
         
-        end_time = time.time()
-        execution_time = end_time - start_time
-        print(execution_time)
+        if is_superuser:
+            payments = PaymentHistory.objects.all().select_related('order')
+
+        else:
+            users = CustomUser.objects.filter(related_staff=request.user.id)
+            # print('STAFF USERS -->', users)
+            user_pks = tuple([user.id for user in users])
+            orders = Order.objects.filter(client=user_pks).select_related('product')
+            # print('STAFF Orders -->', orders)
+            order_pks = tuple([order.id for order in orders])
+            payments = PaymentHistory.objects.filter(order=order_pks).select_related('order')
+            print('STAFF payments -->', payments)
+
+
+        
+        
+        # end_time = time.time()
+        # execution_time = end_time - start_time
+        # print(execution_time)
         
         current_time = datetime.datetime.today()
         # print('\n\n',current_time, '\n')
@@ -453,7 +472,7 @@ class FullDataView(viewsets.GenericViewSet):
 
         end_time = time.time()
         execution_time = end_time - start_time
-        print(execution_time)
+        # print(execution_time)
         
         last_payments = last_payments[:int(last_payments_amount)]
             

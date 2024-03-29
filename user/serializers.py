@@ -42,7 +42,7 @@ class RelatedUserSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = CustomUser
-        fields = ['id',"username"]
+        fields = ['id',"username", "first_name"]
 
 class UserSerializer(serializers.ModelSerializer):
     username = serializers.CharField(max_length=150)

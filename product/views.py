@@ -19,7 +19,7 @@ from .serializers import CustomUser, Category, CategorySerializer, Product, Prod
 
 
 class ListPagination(PageNumberPagination):
-    page_size = 2
+    page_size = 10
     max_page_size = 30
     page_size_query_param = 'page_size'
 
@@ -53,36 +53,27 @@ class PrdViewset(viewsets.ModelViewSet):
         return Response(serializer.data)
     
 
-    # def list(self, request, *args, **kwargs):
-    #     queryset = self.filter_queryset(self.get_queryset())
-
-    #     page = self.paginate_queryset(queryset)
-    #     if page is not None:
-    #         serializer = self.get_serializer(page, many=True)
-    #         return self.get_paginated_response(serializer.data)
-
-    #     serializer = self.get_serializer(queryset, many=True)
-    #     return Response(serializer.data)
-
 
 
 class PaymentMethodViewset(viewsets.ModelViewSet):
     queryset = PaymentMethod.objects.all()
     serializer_class = PaymentMethodSerializer
     permission_classes = (IsAdminUserOrStaffReadOnly,)
-    pagination_class = ListPagination
 
 
-    # def list(self, request, *args, **kwargs):
-    #     queryset = self.filter_queryset(self.get_queryset())
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', True)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
 
-    #     page = self.paginate_queryset(queryset)
-    #     if page is not None:
-    #         serializer = self.get_serializer(page, many=True)
-    #         return self.get_paginated_response(serializer.data)
+        if getattr(instance, '_prefetched_objects_cache', None):
+            instance._prefetched_objects_cache = {}
 
-    #     serializer = self.get_serializer(queryset, many=True)
-    #     return Response(serializer.data)
+        return Response(serializer.data)
+
+
 
 
 class OrderViewset(viewsets.ModelViewSet):
@@ -247,7 +238,7 @@ class PaymentPostView(viewsets.GenericViewSet):
     serializer_class = PaymentHistorySerializer
     permission_classes = (IsAdminUserOrStaff,)
     http_method_names = ["post", "get"]
-    pagination_class = ListPagination
+    pagination_class = ListPagination   
 
 
     def post(self, request, *args, **kwargs):

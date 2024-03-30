@@ -43,8 +43,8 @@ class Product(models.Model):
 class Order(models.Model):
     payment_method = models.ForeignKey(PaymentMethod, on_delete=models.SET_NULL, null=True, blank=True)
     product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True, blank=True)
-    client = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
-
+    client = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True)
+    creator = models.IntegerField(null=True, blank=True)
 
     balance = models.FloatField(default=0)
     payment_progress = models.IntegerField(default=0)
@@ -69,4 +69,4 @@ class PaymentHistory(models.Model):
     time_create = models.DateTimeField(auto_now_add=True, null=True, blank=True)  # time when order has created
 
     def __str__(self):
-        return str(self.payment_amount)
+        return str(self.payment_amount) + ' ' + str(self.time_create.date())

@@ -2,10 +2,11 @@ import datetime
 import threading
 from multiprocessing.dummy import Pool as ThreadPool
 import time
-import queue
+from urllib.parse import unquote
 
 from django.views.decorators.cache import cache_page
 from django.utils.decorators import method_decorator
+from django.db.models import Q
 
 from rest_framework import viewsets, status, generics
 from rest_framework.response import Response
@@ -36,6 +37,35 @@ class PrdViewset(viewsets.ModelViewSet):
     serializer_class = ProductSerializer
     permission_classes = (IsAdminUserOrStaffReadOnly,)
     pagination_class = ListPagination
+    
+    
+    def list(self, request, *args, **kwargs):
+        params = dict(request.GET)
+        search_data = params.get('search')
+        if search_data is None:
+            queryset = self.filter_queryset(self.get_queryset())
+        else:
+            search_data:str = unquote(search_data if not type(search_data) is list else search_data[0])
+            search_data = search_data.split()
+            print("search_data -->", search_data)
+            queryset_collector = []
+            for item in search_data:
+                queryset = Product.objects.filter(Q(id__icontains=item) | Q(name__icontains=item) | Q(author__icontains=item))
+                queryset_collector.extend(queryset)
+            
+            queryset = []
+            for query_obj in queryset_collector:
+                if not query_obj in queryset:
+                    queryset.append(query_obj)
+
+        print(queryset)
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
     
     
     def update(self, request, *args, **kwargs):
@@ -71,6 +101,38 @@ class PaymentMethodViewset(viewsets.ModelViewSet):
         if getattr(instance, '_prefetched_objects_cache', None):
             instance._prefetched_objects_cache = {}
 
+        return Response(serializer.data)
+
+    def list(self, request, *args, **kwargs):
+        
+        params = dict(request.GET)
+        search_data = params.get('search')
+        
+        if not search_data is None:
+            search_data:str = unquote(search_data if not type(search_data) is list else search_data[0])
+            search_data = search_data.split()
+            print("search_data -->", search_data)
+            queryset_collector = []
+            for item in search_data:
+                queryset = PaymentMethod.objects.filter(Q(id__icontains=item) | Q(name__icontains=item))
+                queryset_collector.extend(queryset)
+            queryset = []
+            for query_obj in queryset_collector:
+                if not query_obj in queryset:
+                    queryset.append(query_obj)
+        else:
+            queryset = PaymentMethod.objects.select_related()
+        
+
+
+        
+        
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
 
@@ -127,7 +189,7 @@ class OrderViewset(viewsets.ModelViewSet):
         if not payment_status:
             return Response(err, status=status.HTTP_406_NOT_ACCEPTABLE)
         
-        
+        data['creator'] = request.user.id
         print('BEFORE SERIALIZER')
         serializer = OrderCreateSerializer(data=dict(data))
         serializer.is_valid(raise_exception=True)
@@ -169,24 +231,40 @@ class OrderViewset(viewsets.ModelViewSet):
         else:
             is_active = True 
 
-        # print('IS ACTIVE -->', is_active)
-        if not request.user.is_superuser and not request.user.is_analizer:
-            if request.user.is_staff:
-                queryset = Order.objects.filter(is_active=is_active)
-                # print([order.client.related_staff for order in queryset if ])
-                queryset = [order for order in queryset if not order.client.related_staff is None and order.client.related_staff.id == request.user.id]
+        print('IS ACTIVE -->', is_active)
+        search_data = params.get('search')
 
+        if not search_data is None:
+            search_data:str = unquote(search_data if not type(search_data) is list else search_data[0])
+            search_data = search_data.split()
+            print("search_data -->", search_data)
+            queryset_collector = []
+            for item in search_data:
+                queryset = Order.objects.select_related('client', 'product').filter(Q(id__icontains=item) | Q(client__username__icontains=item) | Q(client__first_name__icontains=item) | Q(product__name__icontains=item)).filter(is_active=is_active)
+                queryset_collector.extend(queryset)
+
+            queryset = []
+            for query_obj in queryset_collector:
+                if not query_obj in queryset:
+                    queryset.append(query_obj)
         else:
-            queryset = Order.objects.filter(is_active=is_active)
-        
-        
+            queryset = Order.objects.filter(is_active=is_active).select_related('client', 'product')
 
+
+
+        # if not request.user.is_superuser and not request.user.is_analizer:
+        if not request.user.is_superuser and request.user.is_staff:
+            queryset = [order for order in queryset if not order.client.related_staff is None and order.client.related_staff.id == request.user.id]
+
+        
+        
         page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)
 
         serializer = self.get_serializer(queryset, many=True)
+
         return Response(serializer.data)
 
     def update(self, request, *args, **kwargs):
@@ -303,9 +381,10 @@ class PaymentPostView(viewsets.GenericViewSet):
         order.save()
         
         # print(serializer.data)
+
         serializer.save()
         ord_serializer = OrderSerializer(order)
-        return Response(ord_serializer.data)
+        return Response(ord_serializer.data | {"payment_data":serializer.data})
     
 
 
@@ -435,51 +514,56 @@ class FullDataView(viewsets.GenericViewSet):
     permission_classes = (IsAdminUserOrStaff,)
     http_method_names = ["get"]
 
-    @method_decorator(cache_page(60))
+    # @method_decorator(cache_page(60))
     def get(self, request, *args, **kwargs):
         params = request.query_params
         # start_time = time.time()
         is_superuser = request.user.is_superuser
-        payments = None
+        all_payments = None
         
         if is_superuser:
             payments = PaymentHistory.objects.all().select_related('order')
-
+            # last_payments = all_payments[:10]
         else:
-            users = CustomUser.objects.filter(related_staff=request.user.id)
+            # users = CustomUser.objects.filter(related_staff=request.user.id)
             # print('STAFF USERS -->', users)
-            user_pks = tuple([user.id for user in users])
-            orders = Order.objects.filter(client=user_pks).select_related('product')
+            
+            # user_pks = tuple([user.id for user in users])
+            orders = Order.objects.filter(creator=request.user.id)
             # print('STAFF Orders -->', orders)
             order_pks = tuple([order.id for order in orders])
-            payments = PaymentHistory.objects.filter(order=order_pks).select_related('order')
+            print('STAFF Orders -->', order_pks)
+            # payments = PaymentHistory.objects.all().select_related('order').order_by('-time_create')
+            # all_payments = PaymentHistory.objects.filter(order=pk)
+            
+            payments = []
+            for pk in order_pks:
+                order_payments = PaymentHistory.objects.filter(order=pk).select_related('order',).order_by('-time_create')
+                
+                if not order_payments == []:
+                    payments.extend(order_payments)
+            
+            # payments = []
+            # for payment in all_payments[0:2]:
+            payments = sorted(payments, key=lambda x: x.time_create, reverse=True)
+            # print(payments[0].time_create>payments[11].time_create)
             print('STAFF payments -->', payments)
 
-
         
+        last_payments_amount = params.get('last_pays')
+        if last_payments_amount is None or not last_payments_amount.isnumeric():
+            last_payments_amount = 5
         
-        # end_time = time.time()
-        # execution_time = end_time - start_time
-        # print(execution_time)
+        last_payments = payments[:10]
         
         current_time = datetime.datetime.today()
         # print('\n\n',current_time, '\n')
         
         
-        last_payments_amount = params.get('last_pays')
-        if last_payments_amount is None or not last_payments_amount.isnumeric():
-            last_payments_amount = 5
             
-        start_time = time.time()    
-        
-        print(payments[0].order)
-        last_payments = [{'payment_amount':payment.payment_amount, 'client':(payment.order.client.first_name if not payment.order is None else None), 'product':(payment.order.product.name if not payment.order is None else None), 'time_create':payment.time_create} for payment in payments.order_by('-time_create')]
 
-        end_time = time.time()
-        execution_time = end_time - start_time
-        # print(execution_time)
-        
-        last_payments = last_payments[:int(last_payments_amount)]
+        last_payments = [{'payment_amount':payment.payment_amount, 'client':(payment.order.client.first_name if not payment.order is None else None), 'product':(payment.order.product.name if not payment.order is None else None), 'time_create':payment.time_create} for payment in last_payments]
+
             
         
         months = [0, 'Yanv', 'Fevr', 'Mart', 'Apre', 'May', 'Iyun', 'Iyul', 'Avgu', 'Sent', 'Okty', 'Noya', 'Deka']

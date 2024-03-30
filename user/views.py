@@ -3,6 +3,7 @@ import requests
 from dateutil.relativedelta import relativedelta
 import certifi
 import ssl
+from urllib.parse import unquote
 
 from geopy.geocoders import Nominatim, options
 
@@ -13,6 +14,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.views.decorators.cache import cache_page
 from django.utils.decorators import method_decorator
+from django.db.models import Q
 
 
 from rest_framework import viewsets, status, generics
@@ -126,30 +128,51 @@ class UserGetAPIView(viewsets.ModelViewSet):
         user_type = (params.get('user_type')[0] if not params.get('user_type') is None else None)
 
 
-
-        queryset = self.filter_queryset(self.get_queryset()) 
+        params = dict(request.GET)
+        search_data = params.get('search')
+        
+        if not search_data is None:
+            search_data:str = unquote(search_data if not type(search_data) is list else search_data[0])
+            search_data = search_data.split()
+            print("search_data -->", search_data)
+            queryset = []
+            for item in search_data:
+                queryset_part = CustomUser.objects.filter(Q(id__icontains=item) | Q(username__icontains=item) | Q(first_name__icontains=item))
+                queryset.extend(queryset_part)
+            print("queryset -->", queryset)
+            
+        else:
+            queryset = CustomUser.objects.all()
+        
+        
         if not request.user.is_superuser and not request.user.is_analizer:
-            queryset = queryset.filter(related_staff=request.user.id)
+            queryset = [user for user in queryset if user.related_staff == request.user]
+            print("queryset in staff -->", queryset)
 
 
         queryset_filter = {
-                            'client':queryset.filter(is_client=True) if request.user.is_superuser or request.user.is_analizer else queryset.filter(related_staff=request.user.id),
-                            'staff':queryset.filter(is_staff=True) if request.user.is_superuser or request.user.is_analizer else [],
-                            'admin':queryset.filter(is_superuser=True) if request.user.is_superuser or request.user.is_analizer else []
+                            'client':[user for user in queryset if user.is_client == True] if request.user.is_superuser or request.user.is_analizer else [user for user in queryset if user.related_staff == request.user],
+                            'staff':[user for user in queryset if user.is_staff == True or user.is_analizer == True] if request.user.is_superuser or request.user.is_analizer else [],
+                            'admin':[user for user in queryset if user.is_superuser == True] if request.user.is_superuser or request.user.is_analizer else []
                            }
 
         try:
             queryset = queryset_filter[user_type]
-        except:pass
+        except Exception as err:
+            print('err -->', err)
 
-
-        page = self.paginate_queryset(queryset)
+        queryset_filtered = []
+        for query_obj in queryset:
+            if not query_obj in queryset_filtered:
+                queryset_filtered.append(query_obj)
+        
+        page = self.paginate_queryset(queryset_filtered)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)
         
         # serializer = self.get_serializer(queryset, many=True)
-        return (Response(serializer.data) if not queryset == [] else Response({'err':"you don't have enough permissions"}, status=status.HTTP_406_NOT_ACCEPTABLE))
+        return (Response(serializer.data) if not queryset_filtered == [] else Response({'err':"you don't have enough permissions"}, status=status.HTTP_406_NOT_ACCEPTABLE))
     
     
     def retrieve(self, request, *args, **kwargs):

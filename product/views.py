@@ -426,11 +426,22 @@ class DashboardBaseDataView(viewsets.GenericViewSet):
         else:
             users = CustomUser.objects.filter(related_staff=request.user.id)
             # print('STAFF USERS -->', users)
-            user_pks = tuple([user.id for user in users])
-            orders = Order.objects.filter(client=user_pks).select_related('product')
+            print('STAFF USERS -->', users)
+            if not len(users)==0:
+                user_pks = tuple([user.id for user in users])
+                orders = Order.objects.filter(client=user_pks).select_related('product')
+            else:
+                orders = []
+                
             # print('STAFF Orders -->', orders)
-            order_pks = tuple([order.id for order in orders])
-            payments = PaymentHistory.objects.filter(order=order_pks)
+            if not len(users)==0:
+                order_pks = tuple([order.id for order in orders])
+                payments = PaymentHistory.objects.filter(order=order_pks)
+            else:
+                payments = []
+
+            
+            
             print('STAFF payments -->', payments)
             
             

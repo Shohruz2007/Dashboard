@@ -58,7 +58,9 @@ class Order(models.Model):
 
     is_active = models.BooleanField(default=True)
 
-
+    class Meta:
+        ordering = ['-time_create']
+    
     def __str__(self):
         return f"{self.product}  ---  {self.client}"
 
@@ -68,5 +70,9 @@ class PaymentHistory(models.Model):
     order = models.ForeignKey(Order, on_delete=models.SET_NULL, null=True, blank=True)
     time_create = models.DateTimeField(auto_now_add=True, null=True, blank=True)  # time when order has created
 
+
+    class Meta:
+        ordering = ['-time_create']
+    
     def __str__(self):
         return str(self.payment_amount) + ' ' + str(self.time_create.date())

@@ -530,7 +530,7 @@ class FullDataView(viewsets.GenericViewSet):
         params = request.query_params
         # start_time = time.time()
         is_superuser = request.user.is_superuser
-        all_payments = None
+
         
         if is_superuser:
             payments = PaymentHistory.objects.all().select_related('order')

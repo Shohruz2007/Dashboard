@@ -231,6 +231,11 @@ class OrderViewset(viewsets.ModelViewSet):
         else:
             is_active = True 
 
+        staff_queryset = False
+        if not request.user.is_superuser and request.user.is_staff:
+            # queryset = [order for order in queryset if not order.client.related_staff is None and order.client.related_staff.id == request.user.id]
+            staff_queryset = True
+            
         print('IS ACTIVE -->', is_active)
         search_data = params.get('search')
 
@@ -240,7 +245,10 @@ class OrderViewset(viewsets.ModelViewSet):
             print("search_data -->", search_data)
             queryset_collector = []
             for item in search_data:
-                queryset = Order.objects.select_related('client', 'product').filter(Q(id__icontains=item) | Q(client__username__icontains=item) | Q(client__first_name__icontains=item) | Q(product__name__icontains=item)).filter(is_active=is_active)
+                if staff_queryset:
+                    queryset = Order.objects.select_related('client', 'product').filter(Q(id__icontains=item) | Q(client__username__icontains=item) | Q(client__first_name__icontains=item) | Q(product__name__icontains=item)).filter(is_active=is_active).filter(creator=request.user.id)
+                else:
+                    queryset = Order.objects.select_related('client', 'product').filter(Q(id__icontains=item) | Q(client__username__icontains=item) | Q(client__first_name__icontains=item) | Q(product__name__icontains=item)).filter(is_active=is_active)
                 queryset_collector.extend(queryset)
 
             queryset = []
@@ -248,13 +256,14 @@ class OrderViewset(viewsets.ModelViewSet):
                 if not query_obj in queryset:
                     queryset.append(query_obj)
         else:
-            queryset = Order.objects.filter(is_active=is_active).select_related('client', 'product')
+            if staff_queryset:
+                queryset = Order.objects.filter(is_active=is_active).select_related('client', 'product').filter(creator=request.user.id)
+            else:
+                queryset = Order.objects.filter(is_active=is_active).select_related('client', 'product')
 
 
 
-        # if not request.user.is_superuser and not request.user.is_analizer:
-        if not request.user.is_superuser and request.user.is_staff:
-            queryset = [order for order in queryset if not order.client.related_staff is None and order.client.related_staff.id == request.user.id]
+
 
         
         

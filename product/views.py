@@ -435,7 +435,7 @@ class DashboardBaseDataView(viewsets.GenericViewSet):
         else:
             users = CustomUser.objects.filter(related_staff=request.user)
 
-            print('All USERS -->', [[user.username, user.first_name, user.related_staff] for user in users])
+            # print('All USERS -->', [[user.username, user.first_name, user.related_staff] for user in users])
             # print('STAFF USERS -->', users)
             
 
@@ -456,7 +456,7 @@ class DashboardBaseDataView(viewsets.GenericViewSet):
 
             
             
-            print('STAFF payments -->', payments)
+            # print('STAFF payments -->', payments)
             
             
         
@@ -568,7 +568,7 @@ class FullDataView(viewsets.GenericViewSet):
             orders = Order.objects.filter(creator=request.user.id)
             # print('STAFF Orders -->', orders)
             order_pks = tuple([order.id for order in orders])
-            print('STAFF Orders -->', order_pks)
+            # print('STAFF Orders -->', order_pks)
             # payments = PaymentHistory.objects.all().select_related('order').order_by('-time_create')
             # all_payments = PaymentHistory.objects.filter(order=pk)
             
@@ -598,7 +598,7 @@ class FullDataView(viewsets.GenericViewSet):
         
             
 
-        last_payments = [{'payment_amount':payment.payment_amount, 'client':(payment.order.client.first_name if not payment.order is None else None), 'product':(payment.order.product.name if not payment.order is None else None), 'time_create':payment.time_create} for payment in last_payments]
+        last_payments = [{'payment_amount':payment.payment_amount, 'client':(payment.order.client.first_name if not payment.order is None else None), 'product':(payment.order.product.name if not payment.order is None and not payment.order.product is None else None), 'time_create':payment.time_create} for payment in last_payments]
 
             
         

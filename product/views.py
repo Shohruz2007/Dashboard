@@ -433,21 +433,26 @@ class DashboardBaseDataView(viewsets.GenericViewSet):
             users = CustomUser.objects.all()
 
         else:
-            users = CustomUser.objects.filter(related_staff=request.user.id)
+            users = CustomUser.objects.filter(related_staff=request.user)
+
+            print('All USERS -->', [[user.username, user.first_name, user.related_staff] for user in users])
             # print('STAFF USERS -->', users)
-            print('STAFF USERS -->', users)
-            if not len(users)==0:
-                user_pks = tuple([user.id for user in users])
-                orders = Order.objects.filter(client=user_pks).select_related('product')
-            else:
-                orders = []
+            
+
+            orders = Order.objects.filter(creator=request.user.id).select_related('product')
+                
+                # user_pks = tuple([user.id for user in users])
+                # orders = Order.objects.filter(user=user_pks).select_related('product')
+
+            # print('All ORDERS -->', [[order, order.client.related_staff, order.creator] for order in orders])
                 
             # print('STAFF Orders -->', orders)
-            if not len(users)==0:
-                order_pks = tuple([order.id for order in orders])
-                payments = PaymentHistory.objects.filter(order=order_pks)
-            else:
-                payments = []
+            payments = []
+
+            order_pks = tuple([order.id for order in orders])
+            for pk in order_pks:
+                payments.extend(PaymentHistory.objects.filter(order=pk))
+
 
             
             
@@ -465,47 +470,58 @@ class DashboardBaseDataView(viewsets.GenericViewSet):
         current_time = datetime.datetime.today()
         
         clients = users.filter(is_client=True)
-        
-            
-        
-        months = [0, 'Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr']
-        
         current_year_orders = [order for order in orders if order.time_create.year == current_time.year]
-        yearly_data = []
-        for month_number in range(1,13):
-            products_data = []
-            for order in current_year_orders:
-                # print('current_time --> ', current_time.month)
-                if order.time_create.month == month_number:
-                    products_data.append(order.product)
-            
-            def find_most_repeated_object(collection):
-                counts = {}
-                most_repeated_obj = None
-                max_count = 0
-
-                # Count the occurrences of each object in the collection
-                for obj in collection:
-                    if obj in counts:
-                        counts[obj] += 1
-                    else:
-                        counts[obj] = 1
-
-                    # Update the most repeated object if necessary
-                    if counts[obj] > max_count:
-                        max_count = counts[obj]
-                        most_repeated_obj = obj
-
-                return most_repeated_obj, max_count
-            
-            
-            most_saled_product,sales_amount = find_most_repeated_object(products_data)
-            yearly_data.append({
-                'Oy': months[month_number],
-                'Mahsulot':most_saled_product.name if not most_saled_product is None else None, 
-                'Sotuvlar soni': sales_amount,
-            })
         
+            
+        #TODO: months best sells  ============
+        # months = [0, 'Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr']
+        
+        # yearly_data = []
+        # for month_number in range(1,13):
+        #     products_data = []
+        #     for order in current_year_orders:
+        #         # print('current_time --> ', current_time.month)
+        #         if order.time_create.month == month_number:
+        #             products_data.append(order.product)
+            
+        #     def find_most_repeated_object(collection):
+        #         counts = {}
+        #         most_repeated_obj = None
+        #         max_count = 0
+
+        #         # Count the occurrences of each object in the collection
+        #         for obj in collection:
+        #             if obj in counts:
+        #                 counts[obj] += 1
+        #             else:
+        #                 counts[obj] = 1
+
+        #             # Update the most repeated object if necessary
+        #             if counts[obj] > max_count:
+        #                 max_count = counts[obj]
+        #                 most_repeated_obj = obj
+
+        #         return most_repeated_obj, max_count
+            
+            
+        #     most_saled_product,sales_amount = find_most_repeated_object(products_data)
+        #     yearly_data.append({
+        #         'Oy': months[month_number],
+        #         'Mahsulot':most_saled_product.name if not most_saled_product is None else None, 
+        #         'Sotuvlar soni': sales_amount,
+        #     })
+        # ============
+        
+        yearly_data = []
+        
+        ordered_produts = [order.product for order in current_year_orders]
+
+            
+            
+
+        
+        for prd in products:
+            yearly_data.append({'product':prd.name, 'sells_amount':ordered_produts.count(prd)})
         
         response_data = {
             "product_len":len(products),

@@ -521,7 +521,7 @@ class DashboardBaseDataView(viewsets.GenericViewSet):
 
         
         for prd in products:
-            yearly_data.append({'product':prd.name, 'sells_amount':ordered_produts.count(prd)})
+            yearly_data.append({'Mahsulot':prd.name, 'Sotuvlar soni':ordered_produts.count(prd)})
         
         response_data = {
             "product_len":len(products),

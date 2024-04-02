@@ -39,6 +39,27 @@ class PrdViewset(viewsets.ModelViewSet):
     pagination_class = ListPagination
     
     
+    def create(self, request, *args, **kwargs):
+        data = dict(request.data.copy())
+        for data_key, data_value in data.items():
+            if type(data[data_key]) is list and len(data[data_key]) == 1:
+                data[data_key] = data_value[0]
+                data_value = data[data_key]
+            
+            if data_key == "price":
+                data[data_key] = str(data_value).replace(' ','').replace(',','')
+        
+        # print(data)
+        
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def perform_create(self, serializer):
+        serializer.save()
+    
     def list(self, request, *args, **kwargs):
         params = dict(request.GET)
         search_data = params.get('search')
@@ -69,9 +90,20 @@ class PrdViewset(viewsets.ModelViewSet):
     
     
     def update(self, request, *args, **kwargs):
+        data = dict(request.data.copy())
+        for data_key, data_value in data.items():
+            if type(data[data_key]) is list and len(data[data_key]) == 1:
+                data[data_key] = data_value[0]
+                data_value = data[data_key]
+            
+            if data_key == "price":
+                data[data_key] = str(data_value).replace(' ','').replace(',','')
+        
+        # print(data)
+        
         partial = kwargs.pop('partial', True)
         instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer = self.get_serializer(instance, data=data, partial=partial)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
 
@@ -90,11 +122,40 @@ class PaymentMethodViewset(viewsets.ModelViewSet):
     serializer_class = PaymentMethodSerializer
     permission_classes = (IsAdminUserOrStaffReadOnly,)
 
+    
+    def create(self, request, *args, **kwargs):
+        data = dict(request.data.copy())
+        for data_key, data_value in data.items():
+            if type(data[data_key]) is list and len(data[data_key]) == 1:
+                data[data_key] = data_value[0]
+                data_value = data[data_key]
+            
+            if data_key == "deposit":
+                data[data_key] = str(data_value).replace(' ','').replace(',','')
+        
+        
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
 
     def update(self, request, *args, **kwargs):
+        data = dict(request.data.copy())
+        for data_key, data_value in data.items():
+            if type(data[data_key]) is list and len(data[data_key]) == 1:
+                data[data_key] = data_value[0]
+                data_value = data[data_key]
+            
+            if data_key == "deposit":
+                data[data_key] = str(data_value).replace(' ','').replace(',','')
+        
+        # print(data)
+        
         partial = kwargs.pop('partial', True)
         instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer = self.get_serializer(instance, data=data, partial=partial)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
 
@@ -332,8 +393,8 @@ class PaymentPostView(viewsets.GenericViewSet):
         # print(request.META.get('HTTP_AUTHORIZATION'))
         params = dict(request.GET)
         try:
-            data = {'order':int(params.get('order')[0]),'payment_amount':float(str(params.get('amount')[0]).replace(' ',''))}
-            print(data)
+            data = {'order':int(params.get('order')[0]),'payment_amount':float(str(params.get('amount')[0]).replace(' ','').replace(',', ''))}
+            # print(data)
         except Exception as err:
             print('ERR IN PARAMS -->', err)
             return Response({'err': "data is wrong"}, status=status.HTTP_406_NOT_ACCEPTABLE)
@@ -344,8 +405,12 @@ class PaymentPostView(viewsets.GenericViewSet):
         # print('ORDER INSIDE PAYMENT -->', serializer.data)
         
         payment_amount = data.get('payment_amount')
+
+        print(payment_amount, type(payment_amount))
+
+        
         order = data.get('order')
-        order = Order.objects.filter(id=order).first()
+        order = Order.objects.filter(is_active=True).filter(id=order).first()
         if order is None:
             return Response({'err': "order data is wrong"}, status=status.HTTP_406_NOT_ACCEPTABLE)
             
@@ -428,7 +493,7 @@ class DashboardBaseDataView(viewsets.GenericViewSet):
         payments = None
         
         if is_superuser:
-            orders = Order.objects.all().select_related('product')
+            orders = Order.objects.filter(is_active=True).select_related('product')
             payments = PaymentHistory.objects.all()
             users = CustomUser.objects.all()
 
@@ -439,7 +504,7 @@ class DashboardBaseDataView(viewsets.GenericViewSet):
             # print('STAFF USERS -->', users)
             
 
-            orders = Order.objects.filter(creator=request.user.id).select_related('product')
+            orders = Order.objects.filter(is_active=True).filter(creator=request.user.id).select_related('product')
                 
                 # user_pks = tuple([user.id for user in users])
                 # orders = Order.objects.filter(user=user_pks).select_related('product')
@@ -565,7 +630,7 @@ class FullDataView(viewsets.GenericViewSet):
             # print('STAFF USERS -->', users)
             
             # user_pks = tuple([user.id for user in users])
-            orders = Order.objects.filter(creator=request.user.id)
+            orders = Order.objects.filter(is_active=True).filter(creator=request.user.id)
             # print('STAFF Orders -->', orders)
             order_pks = tuple([order.id for order in orders])
             # print('STAFF Orders -->', order_pks)

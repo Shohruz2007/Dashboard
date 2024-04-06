@@ -125,41 +125,46 @@ class UserGetAPIView(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         params = dict(request.GET)
-        user_type = (params.get('user_type')[0] if not params.get('user_type') is None else None)
+        user = request.user
+        user_type = (params.get('user_type')[0] if not params.get('user_type') is None else 'none')
+        related_staff = (params.get('related_staff')[0] if not params.get('related_staff') is None else None)
+
+        # print(not related_staff is None and user.is_superuser, related_staff)
+        
+        permissions = {
+            'client':{'requirements':[user.is_superuser, user.is_staff], 'queryset':(CustomUser.objects.filter(is_client=True) if user.is_superuser or user.is_analizer else CustomUser.objects.filter(is_client=True, related_staff=user))},
+            'staff':{'requirements':[user.is_superuser], 'queryset':CustomUser.objects.filter(is_staff=True)},
+            'admin':{'requirements':[user.is_superuser], 'queryset':CustomUser.objects.filter(is_superuser=True)},
+            'none':{'requirements':[True], 'queryset':(CustomUser.objects.all() if user.is_superuser or user.is_analizer else CustomUser.objects.filter(related_staff=user))},
+                        }
+
+        if True in permissions[user_type]['requirements']:
+            # print('QURYSET DATA')
+            queryset = permissions[user_type]['queryset']
+
+        else:
+
+            return Response({'err':"you don't have enough permissions"}, status=status.HTTP_406_NOT_ACCEPTABLE)
+
+        if not related_staff is None:
+            queryset = queryset.filter(related_staff=related_staff)
 
 
-        params = dict(request.GET)
         search_data = params.get('search')
         
         if not search_data is None:
             search_data:str = unquote(search_data if not type(search_data) is list else search_data[0])
             search_data = search_data.split()
             print("search_data -->", search_data)
-            queryset = []
-            for item in search_data:
-                queryset_part = CustomUser.objects.filter(Q(id__icontains=item) | Q(username__icontains=item) | Q(first_name__icontains=item))
-                queryset.extend(queryset_part)
-            print("queryset -->", queryset)
             
-        else:
-            queryset = CustomUser.objects.all()
-        
-        
-        if not request.user.is_superuser and not request.user.is_analizer:
-            queryset = [user for user in queryset if user.related_staff == request.user]
-            print("queryset in staff -->", queryset)
-
-
-        queryset_filter = {
-                            'client':[user for user in queryset if user.is_client == True] if request.user.is_superuser or request.user.is_analizer else [user for user in queryset if user.related_staff == request.user],
-                            'staff':[user for user in queryset if user.is_staff == True or user.is_analizer == True] if request.user.is_superuser or request.user.is_analizer else [],
-                            'admin':[user for user in queryset if user.is_superuser == True] if request.user.is_superuser or request.user.is_analizer else []
-                           }
-
-        try:
-            queryset = queryset_filter[user_type]
-        except Exception as err:
-            print('err -->', err)
+            
+            queryset_collector = []
+            for item in search_data:
+                queryset_part = queryset.filter(Q(id__icontains=item) | Q(username__icontains=item) | Q(first_name__icontains=item) | Q(phone_number__icontains=item))
+                queryset_collector.extend(queryset_part)
+            queryset = queryset_collector
+            print("queryset -->", queryset_collector)
+            
 
         queryset_filtered = []
         for query_obj in queryset:
@@ -178,7 +183,7 @@ class UserGetAPIView(viewsets.ModelViewSet):
     def retrieve(self, request, *args, **kwargs):
         request_pk = request.parser_context['kwargs']['pk']
         print('PK -->', request_pk)
-        # print('USER -->', request.user)
+        print('USER -->', request.user)
         
         
         if request_pk.lower() == 'self':
@@ -276,7 +281,10 @@ class NotificationGetAPIView(viewsets.GenericViewSet):
     
     # @method_decorator(cache_page(60*60*6))
     def get(self, request, *args, **kwargs):
-        queryset = Notification.objects.filter(receiver = request.user)
+        if not request.user.is_superuser:
+            queryset = Notification.objects.filter(receiver = request.user)
+        else:
+            queryset = Notification.objects.all()
 
 
         page = self.paginate_queryset(queryset)
@@ -328,6 +336,7 @@ def ClientPaymentCheck():
             serializer.is_valid(raise_exception=True)
             serializer.save()
             print(serializer.data)
+
 
 
 def replace_russian_letters(text):

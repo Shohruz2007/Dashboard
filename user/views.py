@@ -25,7 +25,7 @@ from Admin_panel.permissions import IsAdminUserOrStaff
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import CustomUser, Notification
-from product.models import Order
+from product.models import Order, PaymentHistory
 from product.serializers import OrderSerializer
 from .serializers import LoginSerializer, UserSerializer, UserCreateSerializer, NotificationSerializer
 
@@ -52,7 +52,7 @@ class LoginAPIView(generics.GenericAPIView):
 
             user_data = UserSerializer(user)
             return Response(user_data.data | user_token, status=status.HTTP_202_ACCEPTED)
-        return Response(status=status.HTTP_400_BAD_REQUEST)
+        return Response({'err':'Username or password went wrong'},status=status.HTTP_400_BAD_REQUEST)
 
     def get_tokens_for_user(self, user):  # getting JWT token and is_staff boolean
         refresh = RefreshToken.for_user(user)
@@ -197,12 +197,48 @@ class UserGetAPIView(viewsets.ModelViewSet):
             
         serializer = self.get_serializer(instance)
         
-        user_data = serializer.data
+        user_data:dict = serializer.data
         staff = request.user
         
 
         
         if staff.is_superuser or request.user.is_analizer or (not user_data['related_staff'] is None and user_data['related_staff'].get('id') == staff.id) or request_pk==request.user.id:
+            if user_data['is_staff'] == True:
+                orders = Order.objects.filter(creator=user_data['id']).select_related('product').select_related('payment_method')
+                print('orders -->', orders)
+                payments = []
+
+                order_pks = tuple([order.id for order in orders])
+                for pk in order_pks:
+                    payments.extend(PaymentHistory.objects.filter(order=pk))
+
+                current_time = datetime.datetime.today()
+                
+                next_month_income = []
+                for order in orders:
+                    if order.is_finished:
+                        continue
+                    
+                    product = order.product
+                    payment_method = order.payment_method
+                    payment_progress = order.payment_progress + (1 if not payment_method.payment_period-1 == order.payment_progress else 0)
+                    months_passed:datetime.timedelta = (current_time.replace(tzinfo=datetime.timezone.utc)-order.time_create).days//30
+                    if months_passed >= payment_method.payment_period:
+                        months_passed = payment_method.payment_period
+                    else:
+                        months_passed += 1
+                    print(months_passed)
+                    
+                    monthly_payment = (product.price+payment_method.extra_payment)/payment_method.payment_period
+                    predicted_income = payment_method.deposit+(months_passed*monthly_payment)-order.balance
+                    if predicted_income > 0:
+                        next_month_income.append(predicted_income)
+                    # print(monthly_payment)
+                    
+                user_data.update({"current_month":{
+                "sale_amount":sum([payment.payment_amount for payment in payments if payment.time_create.month == current_time.month and payment.time_create.year == current_time.year and payment.time_create.day == current_time.day])
+                }, 'orders':len(orders), "next_month_income":sum(next_month_income)})
+                
             return Response([user_data])
         else:
             return Response({'err':"you don't have enough permissions"}, status=status.HTTP_406_NOT_ACCEPTABLE)

@@ -133,7 +133,7 @@ class UserGetAPIView(viewsets.ModelViewSet):
         
         permissions = {
             'client':{'requirements':[user.is_superuser, user.is_staff], 'queryset':(CustomUser.objects.filter(is_client=True) if user.is_superuser or user.is_analizer else CustomUser.objects.filter(is_client=True, related_staff=user))},
-            'staff':{'requirements':[user.is_superuser], 'queryset':CustomUser.objects.filter(is_staff=True)},
+            'staff':{'requirements':[user.is_superuser], 'queryset':CustomUser.objects.filter(is_staff=True, is_superuser=False)},
             'admin':{'requirements':[user.is_superuser], 'queryset':CustomUser.objects.filter(is_superuser=True)},
             'none':{'requirements':[True], 'queryset':(CustomUser.objects.all() if user.is_superuser or user.is_analizer else CustomUser.objects.filter(related_staff=user))},
                         }
@@ -205,7 +205,7 @@ class UserGetAPIView(viewsets.ModelViewSet):
         if staff.is_superuser or request.user.is_analizer or (not user_data['related_staff'] is None and user_data['related_staff'].get('id') == staff.id) or request_pk==request.user.id:
             if user_data['is_staff'] == True:
                 orders = Order.objects.filter(creator=user_data['id']).select_related('product').select_related('payment_method')
-                print('orders -->', orders)
+                # print('orders -->', orders)
                 payments = []
 
                 order_pks = tuple([order.id for order in orders])
@@ -227,9 +227,9 @@ class UserGetAPIView(viewsets.ModelViewSet):
                         months_passed = payment_method.payment_period
                     else:
                         months_passed += 1
-                    print(months_passed)
+                    # print(months_passed)
                     
-                    monthly_payment = (product.price+payment_method.extra_payment)/payment_method.payment_period
+                    monthly_payment = (product.price+payment_method.extra_payment-payment_method.deposit)/payment_method.payment_period
                     predicted_income = payment_method.deposit+(months_passed*monthly_payment)-order.balance
                     if predicted_income > 0:
                         next_month_income.append(predicted_income)

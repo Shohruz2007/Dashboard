@@ -282,7 +282,9 @@ class OrderViewset(viewsets.ModelViewSet):
     
         params = dict(request.GET)
         is_active = params.get('is_active')
-        print('IS ACTIVE -->', is_active)
+        related_staff = (params.get('related_staff') if request.user.is_superuser else None)
+        related_staff = related_staff[0] if type(related_staff) is list else related_staff
+        print('related_staff -->', related_staff)
         
         if type(is_active) is list:
             is_active = is_active[0]
@@ -296,6 +298,7 @@ class OrderViewset(viewsets.ModelViewSet):
         if not request.user.is_superuser and request.user.is_staff:
             # queryset = [order for order in queryset if not order.client.related_staff is None and order.client.related_staff.id == request.user.id]
             staff_queryset = True
+        
             
         print('IS ACTIVE -->', is_active)
         search_data = params.get('search')
@@ -306,8 +309,9 @@ class OrderViewset(viewsets.ModelViewSet):
             print("search_data -->", search_data)
             queryset_collector = []
             for item in search_data:
-                if staff_queryset:
-                    queryset = Order.objects.select_related('client', 'product').filter(Q(id__icontains=item) | Q(client__username__icontains=item) | Q(client__first_name__icontains=item) | Q(product__name__icontains=item)).filter(is_active=is_active).filter(creator=request.user.id)
+                if staff_queryset or related_staff:
+                    print("staff_request")
+                    queryset = Order.objects.select_related('client', 'product').filter(Q(id__icontains=item) | Q(client__username__icontains=item) | Q(client__first_name__icontains=item) | Q(product__name__icontains=item)).filter(is_active=is_active).filter(creator=(request.user.id if related_staff is None else related_staff))
                 else:
                     queryset = Order.objects.select_related('client', 'product').filter(Q(id__icontains=item) | Q(client__username__icontains=item) | Q(client__first_name__icontains=item) | Q(product__name__icontains=item)).filter(is_active=is_active)
                 queryset_collector.extend(queryset)
@@ -317,8 +321,8 @@ class OrderViewset(viewsets.ModelViewSet):
                 if not query_obj in queryset:
                     queryset.append(query_obj)
         else:
-            if staff_queryset:
-                queryset = Order.objects.filter(is_active=is_active).select_related('client', 'product').filter(creator=request.user.id)
+            if staff_queryset or related_staff:
+                queryset = Order.objects.filter(is_active=is_active).select_related('client', 'product').filter(creator=(request.user.id if related_staff is None else related_staff))
             else:
                 queryset = Order.objects.filter(is_active=is_active).select_related('client', 'product')
 

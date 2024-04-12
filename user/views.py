@@ -27,7 +27,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .models import CustomUser, Notification
 from product.models import Order, PaymentHistory
 from product.serializers import OrderSerializer
-from .serializers import LoginSerializer, UserSerializer, UserCreateSerializer, NotificationSerializer
+from .serializers import LoginSerializer, UserSerializer, UserCreateSerializer, NotificationSerializer, UserShortDataSerializer
 
 
 
@@ -128,6 +128,7 @@ class UserGetAPIView(viewsets.ModelViewSet):
         user = request.user
         user_type = (params.get('user_type')[0] if not params.get('user_type') is None else 'none')
         related_staff = (params.get('related_staff')[0] if not params.get('related_staff') is None else None)
+        short_data = (params.get('short_data')[0] if not params.get('short_data') is None else None)
 
         # print(not related_staff is None and user.is_superuser, related_staff)
         
@@ -173,7 +174,10 @@ class UserGetAPIView(viewsets.ModelViewSet):
         
         page = self.paginate_queryset(queryset_filtered)
         if page is not None:
-            serializer = self.get_serializer(page, many=True)
+            if short_data.lower() == 'true':
+                serializer = UserShortDataSerializer(page, many=True)
+            else:
+                serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)
         
         # serializer = self.get_serializer(queryset, many=True)
@@ -245,13 +249,16 @@ class UserGetAPIView(viewsets.ModelViewSet):
     
     
     def update(self, request, *args, **kwargs):
+        params = dict(request.GET)
+
         
         
         partial = kwargs.pop('partial', True)
         
         request_pk = request.parser_context['kwargs']['pk']
         data:dict = request.data
-        # print('PK -->', request_pk)
+        
+        
         if request_pk.lower() == 'self':
             request_pk = request.user.id
         
@@ -260,6 +267,29 @@ class UserGetAPIView(viewsets.ModelViewSet):
         if instance is None:
             return Response({'err':"user not found"}, status=status.HTTP_404_NOT_FOUND)
         # print('USER OBJ -->', instance.__dict__)
+        
+        
+        transfer_staff = data.get('orders_transfer')
+        print('transfer_staff -->', transfer_staff)
+        
+        if not transfer_staff is None and not transfer_staff.lower() == 'null':
+            orders = Order.objects.filter(creator=instance.id)
+            if str(transfer_staff).lower().replace(' ', '') in ['none', '']:
+                transfer_staff = None
+            else:
+                try:
+                    CustomUser.objects.get(id=transfer_staff)
+                    transfer_staff = str(transfer_staff)
+                except:
+                    return Response({'err':"transfer user not found"}, status=status.HTTP_404_NOT_FOUND)
+                    
+            
+            for order in orders:
+                print(order.creator)
+                order.creator = transfer_staff
+                print(order.creator)
+                order.save()
+            print("orders -->", orders)
         
         staff = request.user
         if not staff.is_superuser:

@@ -174,7 +174,7 @@ class UserGetAPIView(viewsets.ModelViewSet):
         
         page = self.paginate_queryset(queryset_filtered)
         if page is not None:
-            if short_data.lower() == 'true':
+            if not short_data is None and short_data.lower() == 'true':
                 serializer = UserShortDataSerializer(page, many=True)
             else:
                 serializer = self.get_serializer(page, many=True)

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import CustomUser, Notification
+from .models import CustomUser, Notification, Comment
 
 class UserModelAdmin(admin.ModelAdmin):
     readonly_fields = ('id',)
@@ -8,4 +8,5 @@ class UserModelAdmin(admin.ModelAdmin):
     list_filter = ('id',)
 
 admin.site.register(CustomUser, UserModelAdmin)
+admin.site.register(Comment)
 admin.site.register(Notification)

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import CustomUser, Notification
+from .models import CustomUser, Notification, Comment
 from django.core import exceptions
 import django.contrib.auth.password_validation as validators
 
@@ -60,3 +60,16 @@ class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
         fields = '__all__'
+
+
+class CommentSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Comment
+        fields = ['id', 'comment_owner','receiver','message','time_create','time_update',]
+
+class CommentGETSerializer(serializers.ModelSerializer):
+    is_owner_superuser = serializers.BooleanField(default=False)
+    class Meta:
+        model = Comment
+        fields = ['id', 'comment_owner','receiver','message','time_create','time_update', 'is_owner_superuser']

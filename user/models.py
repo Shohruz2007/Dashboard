@@ -63,3 +63,20 @@ class Notification(models.Model):
 
     def __str__(self):
         return self.receiver.username
+
+
+class Comment(models.Model):
+    comment_owner = models.IntegerField()
+    receiver = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    message = models.TextField()
+
+
+    time_create = models.DateTimeField(auto_now_add=True, null=True)  # time when user has created
+    time_update = models.DateTimeField(auto_now=True)  # time when user has updated
+
+    def __str__(self):
+        return self.receiver.username
+    
+    
+    class Meta:
+        ordering = ['time_update']

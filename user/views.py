@@ -729,21 +729,16 @@ class CommentAPIView(viewsets.ModelViewSet):
         partial = kwargs.pop("partial", True)
         instance = self.get_object()
 
-        if instance.comment_owner == request.user.id:
 
-            serializer = self.get_serializer(
-                instance, data=request.data, partial=partial
-            )
-            serializer.is_valid(raise_exception=True)
-            self.perform_update(serializer)
-
-            if getattr(instance, "_prefetched_objects_cache", None):
-                # If 'prefetch_related' has been applied to a queryset, we need to
-                # forcibly invalidate the prefetch cache on the instance.
-                instance._prefetched_objects_cache = {}
-
-            return Response(serializer.data)
-        return Response(
-            {"err": "you don't have enough permissions"},
-            status=status.HTTP_406_NOT_ACCEPTABLE,
+        serializer = self.get_serializer(
+            instance, data=request.data, partial=partial
         )
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+
+        if getattr(instance, "_prefetched_objects_cache", None):
+            # If 'prefetch_related' has been applied to a queryset, we need to
+            # forcibly invalidate the prefetch cache on the instance.
+            instance._prefetched_objects_cache = {}
+
+        return Response(serializer.data)

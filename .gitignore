@@ -1,2 +1,17 @@
 /venv/
 db.sqlite3
+
+__pycache__/
+*.py[cod]
+
+# Local dev database - runtime data, never source
+*.sqlite3
+
+# Real credentials; commit .env.sample instead
+.env
+.env.*
+!.env.sample
+
+venv/
+.venv/
+.DS_Store
